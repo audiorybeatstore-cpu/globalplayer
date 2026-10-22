@@ -3,44 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sonaar Global - Audio Player & Hub</title>
+    <title>Sonaar Global - Waveform Audio Player & Hub</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom Keyframe Animations for the Soundwave Visualizer */
-        @keyframes bounce-wave {
-            0% { transform: scaleY(0.15); }
-            100% { transform: scaleY(1); }
+        /* Sonaar Waveform Styling & Layering */
+        .sonaar-wave-container {
+            position: relative;
+            width: 100%;
+            height: 48px;
+            cursor: pointer;
+            user-select: none;
         }
-        .animate-wave {
-            transform-origin: bottom;
-            animation: bounce-wave 1.2s ease-in-out infinite alternate;
+        .sonaar-wave-base {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.35;
         }
-        .animate-wave-paused {
-            animation-play-state: paused !important;
-            transform: scaleY(0.2) !important;
+        .sonaar-wave-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            overflow: hidden;
+            transition: width 0.1s linear;
         }
-        /* Custom range slider styling */
+        .sonaar-wave-progress canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* Custom scrollbar & inputs */
         input[type="range"] {
             accent-color: #10b981;
         }
-        /* Smooth scrolling */
         html {
             scroll-behavior: smooth;
         }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-28 font-sans selection:bg-emerald-500 selection:text-black">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-32 font-sans selection:bg-emerald-500 selection:text-black">
 
     <!-- Persistent Header Navigation Component -->
     <nav class="bg-black/80 backdrop-blur-md sticky top-0 z-50 border-b border-zinc-900 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-bold text-black text-xl tracking-wider shadow-lg shadow-emerald-500/20">S</div>
-            <span class="font-bold tracking-tight text-xl bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">SONAAR<span class="text-emerald-500 font-light text-xs ml-1.5 tracking-widest uppercase">Global</span></span>
+            <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-black text-xl tracking-wider shadow-lg shadow-emerald-500/20">S</div>
+            <span class="font-bold tracking-tight text-xl bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">SONAAR<span class="text-emerald-500 font-light text-xs ml-1.5 tracking-widest uppercase">AUDIO</span></span>
         </div>
         <div class="flex gap-6 font-medium text-sm">
             <button onclick="navigateTo('home')" id="nav-home" class="transition-colors cursor-pointer text-emerald-400 font-semibold flex items-center gap-2">
-                <span>Home Hub</span>
+                <span>Music Hub</span>
             </button>
             <button onclick="navigateTo('about')" id="nav-about" class="transition-colors cursor-pointer text-zinc-400 hover:text-zinc-200 flex items-center gap-2">
                 <span>About Band</span>
@@ -51,70 +83,68 @@
         </div>
     </nav>
 
-    <!-- Content Target: Dynamic SPA area that updates without interrupting playback -->
-    <main id="content-area" class="max-w-4xl mx-auto px-6 py-10 transition-all duration-300">
-        <!-- SPA JavaScript renders views here -->
+    <!-- Content Target: SPA Area -->
+    <main id="content-area" class="max-w-5xl mx-auto px-6 py-10 transition-all duration-300">
+        <!-- SPA View Templates Rendered via JavaScript -->
     </main>
 
     <!-- Hidden Native Audio Engine -->
-    <audio id="global-audio" preload="metadata"></audio>
+    <audio id="global-audio" preload="metadata" crossorigin="anonymous"></audio>
 
-    <!-- Sticky Bottom Persistent Global Audio Player -->
-    <div class="fixed bottom-0 left-0 right-0 h-24 bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800/80 px-6 flex flex-col justify-center gap-1 z-50 shadow-2xl">
+    <!-- Sticky Bottom Persistent Sonaar Global Audio Player -->
+    <div id="sticky-player" class="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800/80 px-6 py-3 flex flex-col justify-center gap-2 z-50 shadow-2xl">
         
-        <!-- Interactive Seek Bar Line -->
-        <div class="absolute top-0 left-0 right-0 flex items-center group cursor-pointer h-1.5 -translate-y-1/2">
-            <input type="range" id="progress-bar" value="0" min="0" max="100" step="0.1" oninput="seekAudio(this.value)" class="w-full h-1 group-hover:h-2 bg-zinc-800 cursor-pointer appearance-none transition-all outline-none">
-        </div>
-
-        <div class="flex items-center justify-between w-full mt-1">
-            <!-- Left: Artwork & Metadata -->
-            <div class="flex items-center gap-4 w-1/3 min-w-[200px]">
-                <img id="player-art" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80" alt="Cover Art" class="w-14 h-14 rounded-lg object-cover bg-zinc-800 shadow-md transition-all duration-300 border border-zinc-800/80">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between gap-6">
+            <!-- Left: Media Cover & Info -->
+            <div class="flex items-center gap-4 w-1/4 min-w-[220px]">
+                <img id="player-art" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80" alt="Cover Art" class="w-14 h-14 rounded-lg object-cover bg-zinc-800 shadow-md border border-zinc-800">
                 <div class="truncate">
                     <h4 id="player-title" class="font-semibold text-sm text-zinc-100 truncate">No Track Selected</h4>
                     <p id="player-artist" class="text-xs text-zinc-400 truncate mt-0.5">Click Play to begin listening</p>
                 </div>
             </div>
 
-            <!-- Center: Player Controls & Time -->
-            <div class="flex flex-col items-center gap-1.5 w-1/3">
+            <!-- Center: Player Controls & Sonaar Interactive Canvas Waveform -->
+            <div class="flex flex-col items-center gap-2 w-2/4 max-w-2xl">
+                <!-- Playback Buttons -->
                 <div class="flex items-center gap-6">
-                    <button onclick="playPrevious()" class="text-zinc-400 hover:text-white transition-colors cursor-pointer text-lg p-1" title="Previous Track">
+                    <button onclick="playPrevious()" class="text-zinc-400 hover:text-white transition-colors cursor-pointer p-1" title="Previous Track">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                     </button>
                     <button onclick="togglePlay()" id="playPause" class="w-11 h-11 rounded-full bg-emerald-500 text-black flex items-center justify-center font-bold hover:scale-105 transition-transform shadow-lg shadow-emerald-500/20 cursor-pointer" title="Play/Pause">
                         <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     </button>
-                    <button onclick="playNext()" class="text-zinc-400 hover:text-white transition-colors cursor-pointer text-lg p-1" title="Next Track">
+                    <button onclick="playNext()" class="text-zinc-400 hover:text-white transition-colors cursor-pointer p-1" title="Next Track">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6h2v12h-2zm-10.5 0v12l8.5-6z"/></svg>
                     </button>
                 </div>
-                <!-- Track Time Counter -->
-                <div class="flex items-center gap-2 text-[11px] text-zinc-400 font-mono tracking-wider">
-                    <span id="time-current">00:00</span>
-                    <span class="text-zinc-600">/</span>
-                    <span id="time-total">00:00</span>
+
+                <!-- Interactive Sonaar Audio Waveform Player Control -->
+                <div class="w-full flex items-center gap-3">
+                    <span id="time-current" class="text-[11px] font-mono text-zinc-400 w-10 text-right">00:00</span>
+                    
+                    <!-- Waveform Engine Container (Sonaar Canvas Overlay Structure) -->
+                    <div id="sPlayer" class="sonaar-wave-container flex-1 bg-zinc-950/40 rounded-md border border-zinc-800/50 p-1" onclick="seekAudioFromWave(event, this)">
+                        <!-- Unplayed Base Wave Canvas -->
+                        <canvas id="sticky-wave-base" class="sonaar-wave-base"></canvas>
+                        <!-- Played Colored Cut Wave Canvas -->
+                        <div id="sticky-wave-progress" class="sonaar-wave-progress">
+                            <canvas id="sticky-wave-cut"></canvas>
+                        </div>
+                    </div>
+
+                    <span id="time-total" class="text-[11px] font-mono text-zinc-400 w-10">00:00</span>
                 </div>
             </div>
 
-            <!-- Right: Dynamic Visualizer & Volume Bar -->
-            <div class="flex items-center justify-end gap-6 w-1/3">
-                <!-- Soundwave Visualizer Bars -->
-                <div id="visualizer" class="flex items-end gap-1 h-6 w-16 opacity-30 transition-opacity duration-300">
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.1s; animation-duration: 0.8s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.4s; animation-duration: 1.2s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.2s; animation-duration: 0.6s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.6s; animation-duration: 1.0s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.3s; animation-duration: 0.7s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.5s; animation-duration: 1.3s;"></div>
-                    <div class="w-1 h-full bg-emerald-400 rounded-t-sm animate-wave animate-wave-paused" style="animation-delay: 0.1s; animation-duration: 0.9s;"></div>
-                </div>
-
-                <!-- Volume Slider -->
+            <!-- Right: Action Icons & Volume Controller -->
+            <div class="flex items-center justify-end gap-5 w-1/4 min-w-[180px]">
+                <!-- Volume Control -->
                 <div class="flex items-center gap-2">
                     <button onclick="toggleMute()" id="mute-btn" class="text-zinc-400 hover:text-white transition-colors cursor-pointer">
-                        <svg id="volume-icon" class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.75 9.5H4.5v5h3.25L12 18.75z"/></svg>
+                        <svg id="volume-icon" class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.75 9.5H4.5v5h3.25L12 18.75z"/>
+                        </svg>
                     </button>
                     <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.8" oninput="adjustVolume(this.value)" class="w-20 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer">
                 </div>
@@ -124,78 +154,161 @@
 
     <!-- Application Script Engine -->
     <script>
-        // Track Inventory Database with direct public MP3 audio clips & cover art
+        // High Quality Public Audio Sources (CORS Enabled Reliable Streams)
         const playlist = [
             { 
                 id: 0, 
-                title: "Acoustic Breeze", 
-                artist: "Benjamin Tissot", 
-                src: "https://www.bensound.com/bensound-music/bensound-acousticbreeze.mp3", 
-                art: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=300&auto=format&fit=crop&q=80",
-                duration: "02:37"
+                title: "House Party 93", 
+                artist: "DJ Sonaar Robot", 
+                src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", 
+                art: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&auto=format&fit=crop&q=80",
+                duration: "06:12",
+                seed: 42
             },
             { 
                 id: 1, 
-                title: "Creative Minds", 
-                artist: "Benjamin Tissot", 
-                src: "https://www.bensound.com/bensound-music/bensound-creativeminds.mp3", 
+                title: "Cloudways Ambient", 
+                artist: "DJ Sonaar Robot", 
+                src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", 
                 art: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300&auto=format&fit=crop&q=80",
-                duration: "02:27"
+                duration: "07:05",
+                seed: 105
             },
             { 
                 id: 2, 
-                title: "Ukulele Joyride", 
-                artist: "Benjamin Tissot", 
-                src: "https://www.bensound.com/bensound-music/bensound-ukulele.mp3", 
-                art: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=300&auto=format&fit=crop&q=80",
-                duration: "02:26"
+                title: "The Piano Intro", 
+                artist: "DJ Sonaar Robot", 
+                src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", 
+                art: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&auto=format&fit=crop&q=80",
+                duration: "05:44",
+                seed: 88
             },
             { 
                 id: 3, 
-                title: "Sunny Side Up", 
-                artist: "Benjamin Tissot", 
-                src: "https://www.bensound.com/bensound-music/bensound-sunny.mp3", 
+                title: "Driving the City", 
+                artist: "DJ Sonaar Robot", 
+                src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", 
                 art: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&auto=format&fit=crop&q=80",
-                duration: "02:20"
+                duration: "05:02",
+                seed: 210
             }
         ];
 
         let currentTrackIndex = 0;
         let isMuted = false;
         let lastVolume = 0.8;
+        const waveCache = {};
 
         const audio = document.getElementById('global-audio');
         const playPauseBtn = document.getElementById('playPause');
-        const visualizer = document.getElementById('visualizer');
-        const progressBar = document.getElementById('progress-bar');
         const timeCurrent = document.getElementById('time-current');
         const timeTotal = document.getElementById('time-total');
         const volumeSlider = document.getElementById('volume-slider');
 
-        // Initial Audio Configurations
+        // Initialize Native Settings
         audio.volume = 0.8;
 
-        // Core Player Engine Event Handlers
+        // Waveform Generator Function (Simulates peaks or processes Web Audio Data)
+        function generateWaveData(seed, barsCount = 120) {
+            if (waveCache[seed]) return waveCache[seed];
+            const bars = [];
+            let current = 0.5;
+            for (let i = 0; i < barsCount; i++) {
+                // Pseudo random smooth waveform peaks generator
+                const x = Math.sin(i * 0.15 + seed) * 10000;
+                const rand = x - Math.floor(x);
+                current = current * 0.7 + rand * 0.3;
+                const height = Math.max(0.15, Math.min(1.0, current));
+                bars.push(height);
+            }
+            waveCache[seed] = bars;
+            return bars;
+        }
+
+        // Draw Sonaar Waveform on Canvas
+        function drawWaveform(canvasId, peaks, barColor, barGap = 2, barWidth = 2) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const parent = canvas.parentElement;
+            
+            canvas.width = parent.clientWidth || 300;
+            canvas.height = parent.clientHeight || 40;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const totalBars = peaks.length;
+            const step = width / totalBars;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = barColor;
+
+            for (let i = 0; i < totalBars; i++) {
+                const barHeight = peaks[i] * (height * 0.85);
+                const x = i * step;
+                const y = (height - barHeight) / 2;
+                
+                // Rounded bar rendering
+                ctx.beginPath();
+                ctx.roundRect(x, y, Math.max(1, step - barGap), barHeight, [2]);
+                ctx.fill();
+            }
+        }
+
+        // Synchronize Sticky Player Waveform Visuals
+        function updateStickyWaveform() {
+            const track = playlist[currentTrackIndex];
+            const peaks = generateWaveData(track.seed, 140);
+            
+            drawWaveform('sticky-wave-base', peaks, '#71717a'); // Gray base wave
+            drawWaveform('sticky-wave-cut', peaks, '#10b981');  // Emerald progress wave
+            
+            // Adjust overlay canvas width to fit container width
+            const baseCanvas = document.getElementById('sticky-wave-base');
+            const cutCanvas = document.getElementById('sticky-wave-cut');
+            if (baseCanvas && cutCanvas) {
+                cutCanvas.width = baseCanvas.width;
+                cutCanvas.height = baseCanvas.height;
+                drawWaveform('sticky-wave-cut', peaks, '#10b981');
+            }
+        }
+
+        // Synchronize Inline Item Waveforms
+        function updateInlineWaveforms() {
+            playlist.forEach(track => {
+                const peaks = generateWaveData(track.seed, 100);
+                drawWaveform(`inline-wave-base-${track.id}`, peaks, '#52525b');
+                drawWaveform(`inline-wave-cut-${track.id}`, peaks, '#10b981');
+            });
+        }
+
+        // Global Audio Listener Events
         audio.addEventListener('play', () => {
             playPauseBtn.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-            visualizer.classList.remove('opacity-30');
-            visualizer.classList.add('opacity-100');
-            document.querySelectorAll('#visualizer div').forEach(bar => bar.classList.remove('animate-wave-paused'));
             toggleInlineButtonState(currentTrackIndex, true);
         });
 
         audio.addEventListener('pause', () => {
             playPauseBtn.innerHTML = `<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
-            visualizer.classList.add('opacity-30');
-            visualizer.classList.remove('opacity-100');
-            document.querySelectorAll('#visualizer div').forEach(bar => bar.classList.add('animate-wave-paused'));
             toggleInlineButtonState(currentTrackIndex, false);
         });
 
         audio.addEventListener('timeupdate', () => {
             if (!isNaN(audio.duration) && audio.duration > 0) {
                 const percentage = (audio.currentTime / audio.duration) * 100;
-                progressBar.value = percentage;
+                
+                // Update Sticky Sonaar Waveform Overlay Width
+                const progressDiv = document.getElementById('sticky-wave-progress');
+                if (progressDiv) {
+                    progressDiv.style.width = `${percentage}%`;
+                }
+
+                // Update Active Inline Waveform Progress Width
+                const inlineProgressDiv = document.getElementById(`inline-wave-progress-${currentTrackIndex}`);
+                if (inlineProgressDiv) {
+                    inlineProgressDiv.style.width = `${percentage}%`;
+                }
+
                 timeCurrent.innerText = formatTime(audio.currentTime);
             }
         });
@@ -208,24 +321,31 @@
             playNext();
         });
 
-        // Player Control Functions
+        // Player Core Logic
         function loadTrack(index) {
+            // Reset previous inline state
             toggleInlineButtonState(currentTrackIndex, false);
+            const prevInlineProgress = document.getElementById(`inline-wave-progress-${currentTrackIndex}`);
+            if (prevInlineProgress) prevInlineProgress.style.width = '0%';
+
             currentTrackIndex = index;
             const track = playlist[index];
             audio.src = track.src;
+            
             document.getElementById('player-title').innerText = track.title;
             document.getElementById('player-artist').innerText = track.artist;
             document.getElementById('player-art').src = track.art;
+            
+            updateStickyWaveform();
         }
 
         function playTrack(index) {
             if (currentTrackIndex !== index || !audio.src) {
                 loadTrack(index);
-                audio.play().catch(err => console.log("User interaction required for autoplay:", err));
+                audio.play().catch(err => console.log("Click interaction required to initiate audio playback:", err));
             } else {
                 if (audio.paused) {
-                    audio.play().catch(err => console.log("Error playing audio:", err));
+                    audio.play().catch(err => console.log("Error resuming track:", err));
                 } else {
                     audio.pause();
                 }
@@ -237,7 +357,7 @@
                 loadTrack(0);
             }
             if (audio.paused) {
-                audio.play().catch(err => console.log("User gesture requirement protection triggered.", err));
+                audio.play().catch(err => console.log("Play action interrupted:", err));
             } else {
                 audio.pause();
             }
@@ -253,10 +373,14 @@
             playTrack(prevIndex);
         }
 
-        function seekAudio(value) {
-            if (audio.duration) {
-                audio.currentTime = (value / 100) * audio.duration;
-            }
+        // Seek Audio from Sonaar Waveform click event
+        function seekAudioFromWave(event, containerElement) {
+            if (!audio.duration) return;
+            const rect = containerElement.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const width = rect.width;
+            const percentage = clickX / width;
+            audio.currentTime = percentage * audio.duration;
         }
 
         function adjustVolume(val) {
@@ -296,46 +420,65 @@
         }
 
         function toggleInlineButtonState(index, isPlaying) {
-            const btn = document.getElementById(`inline-btn-${index}`);
-            if (btn) {
-                btn.innerText = isPlaying ? "Pause Track" : "Play Track";
+            const btnIcon = document.getElementById(`inline-play-icon-${index}`);
+            if (btnIcon) {
                 if (isPlaying) {
-                    btn.classList.replace('bg-emerald-500', 'bg-zinc-700');
-                    btn.classList.replace('text-black', 'text-white');
+                    btnIcon.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
                 } else {
-                    btn.classList.replace('bg-zinc-700', 'bg-emerald-500');
-                    btn.classList.replace('text-white', 'text-black');
+                    btnIcon.innerHTML = `<svg class="w-4 h-4 text-emerald-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
                 }
             }
         }
 
-        // Single Page Application Dynamic View Templates
+        // SPA Dynamic Page Routing & Content Templates
         const pages = {
             home: `
                 <div class="space-y-8 animate-fadeIn">
-                    <header class="space-y-2 border-b border-zinc-800 pb-6">
-                        <span class="text-xs font-semibold tracking-wider text-emerald-400 uppercase">Featured Playlist</span>
-                        <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">Fresh Audio Drops</h1>
-                        <p class="text-zinc-400 text-sm max-w-2xl">
-                            Stream uninterrupted royalty-free tracks while exploring our platform without losing your audio playback state.
+                    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+                        <div>
+                            <span class="text-xs font-semibold tracking-widest text-emerald-400 uppercase">Interactive Music Engine</span>
+                            <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl mt-1">Sonaar Waveform Tracklist</h1>
+                        </div>
+                        <p class="text-zinc-400 text-xs max-w-sm">
+                            Click on any waveform track to start listening instantly. Seamless continuous audio continues playing across navigation routes.
                         </p>
                     </header>
 
-                    <div class="space-y-3">
+                    <!-- Sonaar Interactive Tracklist Grid -->
+                    <div class="space-y-4">
                         ${playlist.map(track => `
-                            <div class="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl flex items-center justify-between hover:border-zinc-700/80 transition-all group shadow-md hover:bg-zinc-900">
-                                <div class="flex items-center gap-4">
-                                    <img src="${track.art}" alt="${track.title}" class="w-12 h-12 rounded-lg object-cover bg-zinc-800 shadow-sm border border-zinc-800">
-                                    <div>
-                                        <h3 class="font-semibold text-zinc-100 text-base group-hover:text-emerald-400 transition-colors">${track.title}</h3>
+                            <div class="bg-zinc-900/80 border border-zinc-800/80 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-zinc-700/80 transition-all group shadow-lg">
+                                <!-- Art & Track Meta -->
+                                <div class="flex items-center gap-4 min-w-[220px]">
+                                    <button onclick="playTrack(${track.id})" id="inline-play-btn-${track.id}" class="relative group cursor-pointer flex-shrink-0">
+                                        <img src="${track.art}" alt="${track.title}" class="w-14 h-14 rounded-xl object-cover bg-zinc-800 shadow-md">
+                                        <div id="inline-play-icon-${track.id}" class="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                                            <svg class="w-5 h-5 text-emerald-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        </div>
+                                    </button>
+                                    <div class="truncate">
+                                        <h3 class="font-bold text-zinc-100 text-base group-hover:text-emerald-400 transition-colors truncate">${track.title}</h3>
                                         <p class="text-xs text-zinc-400 font-medium mt-0.5">${track.artist}</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="text-xs font-mono text-zinc-500 hidden sm:inline">${track.duration}</span>
-                                    <button id="inline-btn-${track.id}" onclick="playTrack(${track.id})" class="bg-emerald-500 text-black text-xs font-bold px-5 py-2.5 rounded-full hover:scale-105 transition-all cursor-pointer shadow-md shadow-emerald-500/10">
-                                        Play Track
-                                    </button>
+
+                                <!-- Mini Interactive Sonaar Audio Waveform Container -->
+                                <div class="flex-1 max-w-xl flex items-center gap-3 bg-zinc-950/60 px-3 py-2 rounded-xl border border-zinc-800/50">
+                                    <div class="sonaar-wave-container flex-1 h-10" onclick="playTrack(${track.id}); seekAudioFromWave(event, this)">
+                                        <canvas id="inline-wave-base-${track.id}" class="sonaar-wave-base"></canvas>
+                                        <div id="inline-wave-progress-${track.id}" class="sonaar-wave-progress">
+                                            <canvas id="inline-wave-cut-${track.id}"></canvas>
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-mono text-zinc-400">${track.duration}</span>
+                                </div>
+
+                                <!-- Action Buttons (Download, Share, Like) -->
+                                <div class="flex items-center gap-2 self-end md:self-center">
+                                    <a href="${track.src}" download target="_blank" class="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black font-semibold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                        <span>Download</span>
+                                    </a>
                                 </div>
                             </div>
                         `).join('')}
@@ -345,26 +488,26 @@
             about: `
                 <div class="space-y-6 animate-fadeIn">
                     <header class="space-y-2 border-b border-zinc-800 pb-6">
-                        <span class="text-xs font-semibold tracking-wider text-emerald-400 uppercase">Behind the Sound</span>
-                        <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">Seamless Architecture</h1>
+                        <span class="text-xs font-semibold tracking-widest text-emerald-400 uppercase">Architecture Overview</span>
+                        <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">Continuous Waveform Audio Engine</h1>
                         <p class="text-zinc-400 text-sm max-w-2xl">
-                            This view was updated dynamically without reloading your browser frame. That means your playback buffer, global audio nodes, and runtime state continue running non-stop.
+                            Inspired by Sonaar's WordPress Audio Player. Built using native Canvas visualizers, HTML5 Audio API nodes, and client-side page rendering.
                         </p>
                     </header>
 
                     <div class="grid gap-6 md:grid-cols-2">
-                        <div class="bg-zinc-900/60 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">⚡</div>
-                            <h3 class="text-lg font-bold text-white">Global Player Node</h3>
+                        <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl space-y-3 shadow-lg">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">📊</div>
+                            <h3 class="text-lg font-bold text-white">Dual-Layer Canvas Waveforms</h3>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                By placing the native HTML5 audio element outside the dynamic view lifecycle, music playback remains completely uninterrupted during client-side route changes.
+                                Renders audio amplitude bars onto two canvas layers (<code class="text-emerald-400">base</code> and <code class="text-emerald-400">cut</code>). The progress clip container expands dynamically as music plays to give an authentic Sonaar wave aesthetic.
                             </p>
                         </div>
-                        <div class="bg-zinc-900/60 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">🎛️</div>
-                            <h3 class="text-lg font-bold text-white">Sonaar Engine Design</h3>
+                        <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl space-y-3 shadow-lg">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">⚡</div>
+                            <h3 class="text-lg font-bold text-white">Zero Audio Interruption</h3>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                Inspired by premium beat store and continuous radio player layouts. Modular JavaScript controls volume, seek positions, and soundwave animation states natively.
+                                Navigation switches components within the single-page application lifecycle without interrupting the underlying native HTML audio instance.
                             </p>
                         </div>
                     </div>
@@ -373,27 +516,27 @@
             contact: `
                 <div class="space-y-6 animate-fadeIn">
                     <header class="space-y-2 border-b border-zinc-800 pb-6">
-                        <span class="text-xs font-semibold tracking-wider text-emerald-400 uppercase">Bookings & Management</span>
+                        <span class="text-xs font-semibold tracking-widest text-emerald-400 uppercase">Bookings & Management</span>
                         <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">Get In Touch</h1>
                         <p class="text-zinc-400 text-sm max-w-2xl">
-                            Want to schedule a live show, register beat rights, or collaborate on continuous audio player integrations? Send us a message below.
+                            Need a custom audio player implementation or interested in booking a band performance? Send us your message.
                         </p>
                     </header>
 
-                    <form onsubmit="event.preventDefault(); alert('Booking request sent successfully!');" class="space-y-4 max-w-xl bg-zinc-900/60 border border-zinc-800 p-6 rounded-2xl shadow-xl">
+                    <form onsubmit="event.preventDefault(); alert('Inquiry sent successfully!');" class="space-y-4 max-w-xl bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl shadow-xl">
                         <div>
                             <label class="block text-xs font-semibold text-zinc-400 mb-1">Your Name</label>
-                            <input type="text" placeholder="John Doe" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors">
+                            <input type="text" placeholder="John Doe" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-zinc-400 mb-1">Email Address</label>
-                            <input type="email" placeholder="john@example.com" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors">
+                            <input type="email" placeholder="john@example.com" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-zinc-400 mb-1">Event or Inquiry Details</label>
-                            <textarea rows="4" placeholder="Tell us about your event date or requirements..." required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors"></textarea>
+                            <label class="block text-xs font-semibold text-zinc-400 mb-1">Message Details</label>
+                            <textarea rows="4" placeholder="Your inquiry..." required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors"></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-emerald-500 text-black font-bold text-sm py-3 rounded-lg hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20 cursor-pointer">
+                        <button type="submit" class="w-full bg-emerald-500 text-black font-bold text-sm py-3 rounded-xl hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20 cursor-pointer">
                             Submit Application
                         </button>
                     </form>
@@ -401,12 +544,10 @@
             `
         };
 
-        // Navigation Controller
+        // Router Navigation Controller
         function navigateTo(pageId) {
-            // Swap View Content
             document.getElementById('content-area').innerHTML = pages[pageId];
             
-            // Adjust Active Navigation Styling
             document.querySelectorAll('nav button').forEach(btn => {
                 btn.classList.remove('text-emerald-400', 'font-semibold');
                 btn.classList.add('text-zinc-400');
@@ -417,15 +558,29 @@
                 activeLink.classList.add('text-emerald-400', 'font-semibold');
             }
 
-            // Sync structural inline play state indicators on DOM repaint
-            if (!audio.paused && currentTrackIndex !== null) {
-                toggleInlineButtonState(currentTrackIndex, true);
+            if (pageId === 'home') {
+                setTimeout(() => {
+                    updateInlineWaveforms();
+                    if (!audio.paused) {
+                        toggleInlineButtonState(currentTrackIndex, true);
+                    }
+                }, 50);
             }
         }
 
-        // Initialize App Landing View
-        navigateTo('home');
-        loadTrack(0);
+        // Window Load & Resize Observers for Canvas Responsiveness
+        window.addEventListener('load', () => {
+            navigateTo('home');
+            loadTrack(0);
+        });
+
+        window.addEventListener('resize', () => {
+            updateStickyWaveform();
+            const homeView = document.getElementById(`inline-wave-base-0`);
+            if (homeView) {
+                updateInlineWaveforms();
+            }
+        });
     </script>
 </body>
 </html>
