@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>True BeatStars Player - Final Fix</title>
+    <title>BeatStars Player - Final Working</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; background-color: #121212; }
         ::-webkit-scrollbar { display: none; }
         
-        /* Canvas for the waveform */
         #waveformCanvas {
             width: 100%;
             height: 100%;
             display: block;
         }
 
-        /* Invisible overlay to catch clicks perfectly */
+        /* Invisible overlay for perfect clicking */
         #clickOverlay {
             position: absolute;
             top: 0;
@@ -31,26 +30,21 @@
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- Real Audio File (Added preload="auto" to help buffering) -->
-    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
+    <!-- RELIABLE AUDIO SOURCE (Swapped to SoundHelix for instant seeking) -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
         
         <!-- TOP ROW: True Waveform & Times -->
         <div class="flex items-center w-full px-6 pt-5 pb-3 gap-4">
-            <!-- Current Time -->
             <span id="currentTime" class="text-[13px] font-medium text-gray-400 tabular-nums w-10 text-right">0:00</span>
             
-            <!-- Waveform Container -->
             <div id="waveformWrapper" class="flex-grow h-[60px] relative">
-                <!-- The Canvas where the real waveform is drawn -->
                 <canvas id="waveformCanvas"></canvas>
-                <!-- Invisible click overlay -->
                 <div id="clickOverlay"></div>
             </div>
 
-            <!-- Total Time -->
             <span id="durationTime" class="text-[13px] font-medium text-gray-400 tabular-nums w-10 text-left">0:00</span>
         </div>
 
@@ -65,7 +59,6 @@
                     <div class="text-[15px] font-semibold text-white tracking-wide truncate">Imperator (trap hip hop drake / Bpm 144 F#min)</div>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="text-[13px] text-gray-400">Black Rose Beatz</span>
-                        <!-- Verified Badge -->
                         <svg class="w-3.5 h-3.5 fill-[#1d9bf0]" viewBox="0 0 24 24"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.755 2.73 1.882 3.44-.04.18-.062.37-.062.56 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25.52 1.333 1.828 2.25 3.337 2.25s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.19-.022-.38-.062-.56 1.127-.71 1.882-1.98 1.882-3.44zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/></svg>
                         <span class="text-[12px] text-gray-600">&bull;</span>
                         <span class="text-[12px] text-gray-400">144 BPM</span>
@@ -82,7 +75,6 @@
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
                 
-                <!-- Play/Pause Button -->
                 <button id="playPauseBtn" class="text-white hover:scale-110 transition-transform flex items-center justify-center cursor-pointer">
                     <svg id="playIcon" class="w-9 h-9 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     <svg id="pauseIcon" class="w-9 h-9 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -116,14 +108,11 @@
                 <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                 </button>
-
-                <!-- Buy Button -->
                 <button class="flex items-center gap-2 bg-[#007bff] hover:bg-blue-600 transition-colors px-5 py-2.5 rounded-md ml-2 shadow-lg shadow-blue-500/20">
                     <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"/></svg>
                     <span class="text-[14px] font-semibold text-white">$51.00</span>
                 </button>
             </div>
-
         </div>
     </div>
 
@@ -134,7 +123,6 @@
         const pauseIcon = document.getElementById('pauseIcon');
         const currentTimeDisplay = document.getElementById('currentTime');
         const durationTimeDisplay = document.getElementById('durationTime');
-        
         const canvas = document.getElementById('waveformCanvas');
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('waveformWrapper');
@@ -142,7 +130,9 @@
 
         let audioBuffer = null;
         let peaks = [];
-        let isSeeking = false; // <-- THE FIX: Prevents audio from fighting the click
+        
+        // THE FIX: This variable prevents the audio from resetting the UI during a seek
+        let isSeeking = false; 
 
         const colorUnplayed = '#4b5563'; 
         const colorPlayed = '#ffffff';   
@@ -152,28 +142,21 @@
             try {
                 const response = await fetch(audio.src);
                 const arrayBuffer = await response.arrayBuffer();
-                
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                
                 extractPeaks(audioBuffer);
-                drawWaveform();
-                
+                drawWaveform(0); // Initial draw at 0
                 durationTimeDisplay.textContent = formatTime(audio.duration);
             } catch (error) {
                 console.error("Error loading audio data.", error);
-                ctx.fillStyle = colorUnplayed;
-                ctx.fillRect(0, wrapper.clientHeight/2 - 1, wrapper.clientWidth, 2);
             }
         }
 
         function extractPeaks(buffer) {
             const channelData = buffer.getChannelData(0); 
             const step = Math.ceil(channelData.length / 1000); 
-            
             for (let i = 0; i < channelData.length; i += step) {
-                let min = 1.0;
-                let max = -1.0;
+                let min = 1.0; let max = -1.0;
                 for (let j = 0; j < step && (i + j) < channelData.length; j++) {
                     const datum = channelData[i + j];
                     if (datum < min) min = datum;
@@ -198,45 +181,27 @@
             const barWidth = 2;
             const gap = 1;
             const barSpacing = barWidth + gap;
-            
             const visibleBars = Math.floor(width / barSpacing);
             const barStep = totalBars / visibleBars; 
 
             ctx.clearRect(0, 0, width, height);
 
-            // If we are seeking, use the manual progress. Otherwise, use the actual audio time.
-            let progressRatio = 0;
-            if (overrideProgress !== null) {
-                progressRatio = overrideProgress;
-            } else {
-                const currentTime = audio.currentTime || 0;
-                const duration = audio.duration || 1;
-                progressRatio = currentTime / duration;
-            }
+            // Use the manual progress if provided (during seek), otherwise use audio time
+            let progressRatio = overrideProgress !== null ? overrideProgress : (audio.currentTime / (audio.duration || 1));
 
             for (let i = 0; i < visibleBars; i++) {
                 const peakIndex = Math.floor(i * barStep);
                 let peak = peaks[peakIndex] || 0;
-                
                 let barHeight = Math.max(2, peak * height * 1.5);
-                
                 const x = i * barSpacing;
                 const y = (height - barHeight) / 2;
-
                 const barProgress = x / width;
                 
-                if (barProgress <= progressRatio) {
-                    ctx.fillStyle = colorPlayed;
-                } else {
-                    ctx.fillStyle = colorUnplayed;
-                }
+                ctx.fillStyle = barProgress <= progressRatio ? colorPlayed : colorUnplayed;
 
                 ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(x, y, barWidth, barHeight, 1);
-                } else {
-                    ctx.rect(x, y, barWidth, barHeight);
-                }
+                if (ctx.roundRect) { ctx.roundRect(x, y, barWidth, barHeight, 1); } 
+                else { ctx.rect(x, y, barWidth, barHeight); }
                 ctx.fill();
             }
 
@@ -252,8 +217,9 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
+        // Audio Timeupdate Listener
         audio.addEventListener('timeupdate', () => {
-            // If we are currently clicking/seeking, ignore the timeupdate until it catches up
+            // IF WE ARE SEEKING, IGNORE THIS EVENT! It prevents the snap-back.
             if (isSeeking) return; 
             
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
@@ -272,32 +238,27 @@
             }
         });
 
-        // --- BULLETPROOF SEEK LOGIC ---
-        clickOverlay.addEventListener('mousedown', (e) => {
-            // 1. Engage the seek lock so the audio player doesn't reset itself
+        // --- THE ULTIMATE SEEK LOGIC ---
+        clickOverlay.addEventListener('click', (e) => {
+            // 1. Lock the UI
             isSeeking = true;
-
+            
             const rect = clickOverlay.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
-            
-            let seekPercent = Math.max(0, Math.min(1, clickX / width));
+            const seekPercent = Math.max(0, Math.min(1, clickX / width));
 
-            // 2. Draw the waveform IMMEDIATELY so the user sees it jump instantly
+            // 2. Draw instantly where the user clicked
             drawWaveform(seekPercent);
+            currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
 
-            // 3. Update the text time instantly
-            if (audio.duration) {
-                currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
-                
-                // 4. Set the actual audio time
-                audio.currentTime = seekPercent * audio.duration;
-            }
+            // 3. Set the audio time
+            audio.currentTime = seekPercent * audio.duration;
 
-            // 5. Release the lock after a tiny delay to let the audio engine catch up
+            // 4. Unlock the UI after a short delay to allow the audio to buffer
             setTimeout(() => {
                 isSeeking = false;
-            }, 100);
+            }, 150); 
         });
 
         window.addEventListener('resize', () => {
@@ -305,7 +266,6 @@
             window.resizeTimer = setTimeout(() => drawWaveform(), 100);
         });
 
-        // Initialize
         loadAudioData();
     </script>
 </body>
