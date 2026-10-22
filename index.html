@@ -3,32 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tailwind Audio Player</title>
+    <title>Tailwind Pro Audio Player (Real Waveform)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom scrollbar hidden for clean look */
-        body { margin: 0; }
-        
-        /* Small tweak to ensure SVG bars render crisply */
-        .waveform-svg {
-            shape-rendering: crispEdges;
-        }
+        body { margin: 0; background-color: #121212; }
+        /* Prevents scrollbar issues */
+        canvas { display: block; }
     </style>
 </head>
-<body class="bg-[#121212] flex justify-center items-center h-screen font-sans antialiased">
+<body class="flex justify-center items-center h-screen font-sans antialiased select-none">
 
-    <!-- Real Audio File (Royalty free track for testing) -->
-    <audio id="audioPlayer" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
+    <!-- Real Audio File (Royalty free Lo-Fi track) -->
+    <audio id="audioPlayer" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" crossorigin="anonymous"></audio>
 
     <!-- Main Player Container -->
-    <div class="w-full max-w-[1400px] h-[80px] bg-black flex items-center text-white border-t border-b border-[#222] overflow-hidden select-none">
+    <div class="w-full max-w-[1400px] h-[80px] bg-black flex items-center text-white border-t border-b border-[#222] overflow-hidden">
         
         <!-- Left: Track Info -->
         <div class="flex items-center w-[280px] pl-5 h-full shrink-0">
-            <!-- Album Art -->
             <div class="w-[48px] h-[48px] bg-[#222] bg-cover bg-center mr-4 rounded-sm" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
-            
             <div class="flex flex-col justify-center">
                 <div class="text-[15px] font-medium mb-1 tracking-wide">Tempus Illusio</div>
                 <div class="text-[12px] text-[#999]">Golden Age</div>
@@ -40,52 +34,36 @@
             
             <!-- Controls Group -->
             <div class="flex items-center gap-4 shrink-0">
-                <!-- Menu -->
-                <button class="text-white opacity-80 hover:opacity-100 hover:scale-105 transition-all cursor-pointer">
+                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
                 </button>
-                
-                <!-- Prev -->
-                <button class="text-white opacity-80 hover:opacity-100 hover:scale-105 transition-all cursor-pointer">
+                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
                 
-                <!-- Play/Pause Button -->
+                <!-- Play/Pause -->
                 <button id="playPauseBtn" class="text-white cursor-pointer hover:scale-105 transition-all">
-                    <!-- Play Icon -->
                     <svg id="playIcon" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <!-- Pause Icon (Hidden initially) -->
                     <svg id="pauseIcon" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 </button>
                 
-                <!-- Next -->
-                <button class="text-white opacity-80 hover:opacity-100 hover:scale-105 transition-all cursor-pointer">
+                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
                 </button>
-                
-                <!-- Shuffle -->
-                <button class="text-white opacity-80 hover:opacity-100 hover:scale-105 transition-all cursor-pointer">
+                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
                 </button>
-                
-                <!-- Repeat -->
-                <button class="text-white opacity-80 hover:opacity-100 hover:scale-105 transition-all cursor-pointer">
+                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
                 </button>
 
-                <!-- Current Time -->
                 <span id="currentTime" class="text-[11px] text-white tabular-nums ml-1">00:00</span>
             </div>
 
-            <!-- Waveform Area -->
-            <div id="waveform" class="grow h-[40px] relative cursor-pointer flex items-center">
-                <!-- Base Layer (Gray) -->
-                <svg id="waveSvgBg" class="w-full h-full block waveform-svg" preserveAspectRatio="none"></svg>
-                
-                <!-- Played Layer (Teal Overlay) -->
-                <div id="wavePlayedContainer" class="absolute top-0 left-0 h-full overflow-hidden pointer-events-none w-0 border-r border-[#00e09e]">
-                    <svg id="waveSvgFg" class="absolute top-0 left-0 h-full w-screen max-w-[1100px] waveform-svg" preserveAspectRatio="none"></svg>
-                </div>
+            <!-- Real-Time Waveform Area -->
+            <div id="waveformWrapper" class="grow h-[40px] relative cursor-pointer flex items-center bg-transparent">
+                <!-- We use Canvas for real-time audio visualization -->
+                <canvas id="waveformCanvas" class="w-full h-full"></canvas>
             </div>
 
             <!-- Remaining Time -->
@@ -95,62 +73,138 @@
     </div>
 
     <script>
-        // DOM Elements
         const audio = document.getElementById('audioPlayer');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const playIcon = document.getElementById('playIcon');
         const pauseIcon = document.getElementById('pauseIcon');
-        const waveformContainer = document.getElementById('waveform');
-        const waveSvgBg = document.getElementById('waveSvgBg');
-        const waveSvgFg = document.getElementById('waveSvgFg');
-        const wavePlayedContainer = document.getElementById('wavePlayedContainer');
         const currentTimeDisplay = document.getElementById('currentTime');
         const remainingTimeDisplay = document.getElementById('remainingTime');
+        
+        const canvas = document.getElementById('waveformCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('waveformWrapper');
 
-        // Waveform Settings
-        const barCount = 350; // Dense look
-        const barWidth = 1;
-        const barGap = 1.5; 
+        // Audio Context Variables
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let sourceNode;
+        let isAudioSetup = false;
 
-        // 1. Generate Realistic, Spiky Waveform
-        function generateWaveform() {
-            let bgHtml = '';
-            let fgHtml = '';
+        // Colors matching the design
+        const bgColor = '#444'; // Unplayed color
+        const fgColor = '#00e09e'; // Played color
+
+        // 1. Setup Canvas Size & DPI
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = wrapper.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 2. Initialize Web Audio API
+        function initAudio() {
+            if (isAudioSetup) return;
+
+            // Create Audio Context
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioContext();
             
-            for (let i = 0; i < barCount; i++) {
-                // Create a pseudo-random "audio" pattern
-                let envelope = Math.sin((i / barCount) * Math.PI * 2) * 0.5 + 0.5;
-                let envelope2 = Math.sin((i / barCount) * Math.PI * 15) * 0.3;
-                let noise = Math.random() * 0.8;
-                
-                let baseHeight = Math.abs(envelope + envelope2 + noise) * 100;
-                
-                // Add an artificial "drop" at the end
-                if (i > barCount * 0.7) baseHeight = baseHeight * 0.3; 
-
-                // Ensure minimum height
-                let heightPercent = Math.max(10, Math.min(100, baseHeight)); 
-                
-                let x = i * (barWidth + barGap);
-                let y = 50 - (heightPercent / 2);
-                
-                // Tailwind classes won't work inside SVG string injection, so we use fill attributes
-                let rectBg = `<rect fill="#444" x="${x}" y="${y}%" width="${barWidth}" height="${heightPercent}%" rx="0.5"></rect>`;
-                let rectFg = `<rect fill="#00e09e" x="${x}" y="${y}%" width="${barWidth}" height="${heightPercent}%" rx="0.5"></rect>`;
-                
-                bgHtml += rectBg;
-                fgHtml += rectFg; 
-            }
-
-            waveSvgBg.innerHTML = bgHtml;
-            waveSvgFg.innerHTML = fgHtml;
+            // Create nodes
+            analyser = audioContext.createAnalyser();
+            sourceNode = audioContext.createMediaElementSource(audio);
             
-            const totalWidth = barCount * (barWidth + barGap);
-            waveSvgBg.setAttribute('viewBox', `0 0 ${totalWidth} 100`);
-            waveSvgFg.setAttribute('viewBox', `0 0 ${totalWidth} 100`);
+            // Connect: Audio -> Analyser -> Speakers
+            sourceNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            // Fast Fourier Transform size (determines resolution of frequencies)
+            analyser.fftSize = 256; 
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            isAudioSetup = true;
         }
 
-        // 2. Format Time (MM:SS)
+        // 3. Draw Loop
+        function draw() {
+            requestAnimationFrame(draw);
+
+            // Get current UI size
+            const rect = wrapper.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (!isAudioSetup || !analyser) {
+                // Draw a flat line if audio isn't playing yet
+                drawFlatLine(width, height);
+                return;
+            }
+
+            // Get real-time frequency data (0 to 255)
+            analyser.getByteFrequencyData(dataArray);
+
+            // We want fewer bars than frequency bins for a clean look
+            const barCount = 100; 
+            const barWidth = 2;
+            const gap = 3;
+            const step = Math.floor(dataArray.length / barCount) || 1;
+            
+            // Calculate where the progress playhead is
+            const progress = audio.currentTime / (audio.duration || 1);
+            const playheadX = width * progress;
+
+            // Draw Bars
+            for (let i = 0; i < barCount; i++) {
+                // Get average frequency for this bar group
+                let value = 0;
+                for (let j = 0; j < step; j++) {
+                    value += dataArray[(i * step) + j];
+                }
+                value = value / step;
+
+                // Normalize value (0 to 1) and add min height so bars don't disappear
+                let barHeight = (value / 255) * height;
+                if (barHeight < 4) barHeight = 4; 
+                
+                const x = i * (barWidth + gap);
+                
+                // Determine if this bar is before or after the playhead
+                if (x < playheadX) {
+                    ctx.fillStyle = fgColor; // Played
+                } else {
+                    ctx.fillStyle = bgColor; // Unplayed
+                }
+
+                // Draw centered vertically
+                const y = (height / 2) - (barHeight / 2);
+                ctx.fillRect(x, y, barWidth, barHeight);
+            }
+
+            // Draw the teal playhead line
+            ctx.fillStyle = fgColor;
+            ctx.fillRect(playheadX, 0, 1, height);
+        }
+
+        function drawFlatLine(width, height) {
+            const barCount = 100;
+            const barWidth = 2;
+            const gap = 3;
+            ctx.fillStyle = bgColor;
+            for (let i = 0; i < barCount; i++) {
+                const x = i * (barWidth + gap);
+                ctx.fillRect(x, (height/2) - 2, barWidth, 4);
+            }
+        }
+
+        // 4. Format Time
         function formatTime(seconds) {
             if (isNaN(seconds)) return "00:00";
             const min = Math.floor(seconds / 60);
@@ -158,34 +212,30 @@
             return `${min < 10 ? '0' : ''}${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // 3. Update UI based on actual Audio time
-        function updateUI() {
-            if (!audio.duration) return;
+        // 5. Audio Event Listeners
+        audio.addEventListener('timeupdate', () => {
+            currentTimeDisplay.textContent = formatTime(audio.currentTime);
+            const remaining = audio.duration - audio.currentTime;
+            remainingTimeDisplay.textContent = `-${formatTime(remaining)}`;
+        });
+        
+        audio.addEventListener('loadedmetadata', () => {
+            remainingTimeDisplay.textContent = `-${formatTime(audio.duration)}`;
+        });
 
-            const currentTime = audio.currentTime;
-            const duration = audio.duration;
-            
-            // Calculate percentage for the waveform
-            const progressPercent = (currentTime / duration) * 100;
-            wavePlayedContainer.style.width = `${progressPercent}%`;
-            
-            // Update Time Displays
-            currentTimeDisplay.textContent = formatTime(currentTime);
-            const remainingSeconds = duration - currentTime;
-            remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
-        }
-
-        // 4. Audio Event Listeners
-        audio.addEventListener('timeupdate', updateUI);
-        audio.addEventListener('loadedmetadata', updateUI);
         audio.addEventListener('ended', () => {
             playIcon.classList.remove('hidden');
             pauseIcon.classList.add('hidden');
-            wavePlayedContainer.style.width = '0%';
         });
 
-        // 5. Play/Pause Toggle
+        // 6. Play/Pause Logic
         playPauseBtn.addEventListener('click', () => {
+            // Initialize audio context on first click (Browser security requirement)
+            initAudio();
+            if(audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
             if (audio.paused) {
                 audio.play();
                 playIcon.classList.add('hidden');
@@ -197,19 +247,22 @@
             }
         });
 
-        // 6. Seek on Waveform Click
-        waveformContainer.addEventListener('click', (e) => {
-            const rect = waveformContainer.getBoundingClientRect();
+        // 7. Seek on Click
+        wrapper.addEventListener('click', (e) => {
+            const rect = wrapper.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
             
-            const seekPercent = clickX / width;
-            audio.currentTime = seekPercent * audio.duration;
-            updateUI(); // Update immediately for smooth feel
+            // Calculate percentage and set audio time
+            if (audio.duration) {
+                const seekPercent = clickX / width;
+                audio.currentTime = seekPercent * audio.duration;
+            }
         });
 
-        // Initialize
-        generateWaveform();
+        // Start drawing loop
+        draw();
+
     </script>
 </body>
 </html>
