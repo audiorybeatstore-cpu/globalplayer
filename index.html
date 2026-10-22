@@ -154,7 +154,7 @@
                 durationTimeDisplay.textContent = formatTime(audio.duration);
             } catch (error) {
                 console.error("Error loading audio data. Check CORS settings.", error);
-                // Fallback: If fetch fails (e.g. running local file without server), draw a flat line
+                // Fallback: If fetch fails, draw a flat line
                 ctx.fillStyle = colorUnplayed;
                 ctx.fillRect(0, wrapper.clientHeight/2 - 1, wrapper.clientWidth, 2);
             }
@@ -272,29 +272,32 @@
             }
         });
 
-        // Seek on Click
+        // --- FIXED SEEK LOGIC ---
         wrapper.addEventListener('click', (e) => {
-            const rect = wrapper.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const width = rect.width;
+            // Use offsetX to get exact pixel position relative to the container
+            const clickX = e.offsetX;
+            const width = wrapper.clientWidth;
             
             if (audio.duration) {
-                const seekPercent = clickX / width;
+                // Calculate percentage (0 to 1)
+                const seekPercent = Math.max(0, Math.min(1, clickX / width));
+                
+                // Set the new time
                 audio.currentTime = seekPercent * audio.duration;
-                drawWaveform(); // Instantly update visual
+                
+                // Instantly draw the waveform to reflect the new position
+                drawWaveform(); 
             }
         });
 
         // Redraw on window resize so it always fits the screen
         window.addEventListener('resize', () => {
-            // Debounce resize for performance
             clearTimeout(window.resizeTimer);
             window.resizeTimer = setTimeout(drawWaveform, 100);
         });
 
         // Initialize
         loadAudioData();
-
     </script>
 </body>
 </html>
