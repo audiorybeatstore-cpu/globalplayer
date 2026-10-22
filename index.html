@@ -3,73 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tailwind Pro Audio Player (Real Waveform)</title>
+    <title>BeatStars Style Player</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; background-color: #121212; }
-        /* Prevents scrollbar issues */
-        canvas { display: block; }
+        
+        /* Custom audio bars */
+        .wave-bar {
+            width: 2px;
+            margin-right: 2px;
+            background-color: #4b5563; /* Tailwind gray-600 */
+            border-radius: 1px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        /* The played (white/teal) state */
+        .played .wave-bar {
+            background-color: #ffffff; 
+        }
+
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="flex justify-center items-center h-screen font-sans antialiased select-none">
+<body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- Real Audio File (Royalty free Lo-Fi track) -->
-    <audio id="audioPlayer" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" crossorigin="anonymous"></audio>
+    <!-- Real Audio File (Loading a static MP3 so you can test) -->
+    <audio id="audioPlayer" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
 
     <!-- Main Player Container -->
-    <div class="w-full max-w-[1400px] h-[80px] bg-black flex items-center text-white border-t border-b border-[#222] overflow-hidden">
+    <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
         
-        <!-- Left: Track Info -->
-        <div class="flex items-center w-[280px] pl-5 h-full shrink-0">
-            <div class="w-[48px] h-[48px] bg-[#222] bg-cover bg-center mr-4 rounded-sm" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
-            <div class="flex flex-col justify-center">
-                <div class="text-[15px] font-medium mb-1 tracking-wide">Tempus Illusio</div>
-                <div class="text-[12px] text-[#999]">Golden Age</div>
-            </div>
-        </div>
-
-        <!-- Center: Controls & Waveform -->
-        <div class="flex items-center grow h-full px-5 gap-5">
+        <!-- TOP ROW: Waveform & Times -->
+        <div class="flex items-center w-full px-6 pt-4 pb-2 gap-4">
+            <!-- Current Time -->
+            <span id="currentTime" class="text-[13px] font-medium text-gray-300 tabular-nums w-10 text-right">0:00</span>
             
-            <!-- Controls Group -->
-            <div class="flex items-center gap-4 shrink-0">
-                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-                </button>
-                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                </button>
+            <!-- Waveform Container -->
+            <div id="waveformContainer" class="flex-grow h-[50px] relative cursor-pointer flex items-center overflow-hidden">
+                <!-- Base Layer (Unplayed) -->
+                <div id="waveformBase" class="absolute top-0 left-0 h-full w-full flex items-center whitespace-nowrap"></div>
                 
-                <!-- Play/Pause -->
-                <button id="playPauseBtn" class="text-white cursor-pointer hover:scale-105 transition-all">
-                    <svg id="playIcon" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="pauseIcon" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                </button>
-                
-                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
-                </button>
-                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
-                </button>
-                <button class="text-white opacity-80 hover:opacity-100 transition-all cursor-pointer">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-                </button>
-
-                <span id="currentTime" class="text-[11px] text-white tabular-nums ml-1">00:00</span>
+                <!-- Played Layer (White Overlay) -->
+                <div id="waveformPlayed" class="absolute top-0 left-0 h-full overflow-hidden flex items-center pointer-events-none played w-0 border-r-2 border-white">
+                    <!-- This gets injected via JS (it's a copy of the base) -->
+                    <div id="waveformPlayedInner" class="h-full w-full flex items-center whitespace-nowrap"></div>
+                </div>
             </div>
 
-            <!-- Real-Time Waveform Area -->
-            <div id="waveformWrapper" class="grow h-[40px] relative cursor-pointer flex items-center bg-transparent">
-                <!-- We use Canvas for real-time audio visualization -->
-                <canvas id="waveformCanvas" class="w-full h-full"></canvas>
-            </div>
-
-            <!-- Remaining Time -->
-            <span id="remainingTime" class="text-[11px] text-[#999] tabular-nums shrink-0">-00:00</span>
+            <!-- Total Time -->
+            <span id="remainingTime" class="text-[13px] font-medium text-gray-300 tabular-nums w-10 text-left">0:00</span>
         </div>
 
+        <!-- BOTTOM ROW: Track Info & Controls -->
+        <div class="flex items-center justify-between px-6 pb-4 pt-2">
+            
+            <!-- Left: Cover Art & Title -->
+            <div class="flex items-center gap-4 w-[400px]">
+                <!-- Cover Image -->
+                <div class="w-[56px] h-[56px] bg-[#222] bg-cover bg-center rounded-sm shrink-0" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
+                
+                <!-- Title Info -->
+                <div class="flex flex-col truncate">
+                    <div class="text-[15px] font-semibold text-white tracking-wide truncate">Imperator (trap hip hop drake / Bpm 144 F#min)</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-[13px] text-gray-400">Black Rose Beatz</span>
+                        <!-- Verified Badge -->
+                        <svg class="w-3.5 h-3.5 fill-[#1d9bf0]" viewBox="0 0 24 24"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.755 2.73 1.882 3.44-.04.18-.062.37-.062.56 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25.52 1.333 1.828 2.25 3.337 2.25s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.19-.022-.38-.062-.56 1.127-.71 1.882-1.98 1.882-3.44zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/></svg>
+                        <span class="text-[12px] text-gray-500">&bull;</span>
+                        <span class="text-[12px] text-gray-400">144 BPM</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Controls -->
+            <div class="flex items-center gap-6">
+                <!-- Heart -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-6 h-6 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                </button>
+                <!-- Prev -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <!-- Play/Pause -->
+                <button id="playPauseBtn" class="text-white hover:scale-105 transition-transform">
+                    <svg id="playIcon" class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pauseIcon" class="w-8 h-8 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <!-- Next -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
+                </button>
+                <!-- Menu -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                </button>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex items-center gap-6 w-[400px] justify-end">
+                <!-- Edit -->
+                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    <span class="text-[13px] font-medium">Edit</span>
+                </button>
+                <!-- Loop -->
+                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <span class="text-[13px] font-medium">Loop</span>
+                </button>
+                <!-- Lyrics -->
+                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span class="text-[13px] font-medium">Lyrics</span>
+                </button>
+                <!-- Volume -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+                <!-- More (dots) -->
+                <button class="text-gray-300 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+
+                <!-- Buy Button -->
+                <button class="flex items-center gap-2 bg-[#007bff] hover:bg-blue-600 transition-colors px-4 py-2 rounded-md ml-2">
+                    <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"/></svg>
+                    <span class="text-[14px] font-semibold text-white">$51.00</span>
+                </button>
+            </div>
+
+        </div>
     </div>
 
     <script>
@@ -80,162 +147,65 @@
         const currentTimeDisplay = document.getElementById('currentTime');
         const remainingTimeDisplay = document.getElementById('remainingTime');
         
-        const canvas = document.getElementById('waveformCanvas');
-        const ctx = canvas.getContext('2d');
-        const wrapper = document.getElementById('waveformWrapper');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const waveformBase = document.getElementById('waveformBase');
+        const waveformPlayed = document.getElementById('waveformPlayed');
+        const waveformPlayedInner = document.getElementById('waveformPlayedInner');
 
-        // Audio Context Variables
-        let audioContext;
-        let analyser;
-        let dataArray;
-        let sourceNode;
-        let isAudioSetup = false;
+        // --- 1. Generate Static BeatStars Style Waveform ---
+        const barCount = 200;
+        let baseHtml = '';
 
-        // Colors matching the design
-        const bgColor = '#444'; // Unplayed color
-        const fgColor = '#00e09e'; // Played color
-
-        // 1. Setup Canvas Size & DPI
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = wrapper.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // 2. Initialize Web Audio API
-        function initAudio() {
-            if (isAudioSetup) return;
-
-            // Create Audio Context
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContext = new AudioContext();
+        for (let i = 0; i < barCount; i++) {
+            // Create a natural looking audio wave using sine waves and random noise
+            // This creates a pattern of loud and soft sections
+            let envelope = Math.sin((i / barCount) * Math.PI * 4) * 0.4 + 0.6; 
+            let noise = Math.random() * 0.5 + 0.5;
             
-            // Create nodes
-            analyser = audioContext.createAnalyser();
-            sourceNode = audioContext.createMediaElementSource(audio);
+            // Calculate height (10% to 100%)
+            let heightPercent = Math.min(100, Math.max(10, (envelope * noise) * 100));
             
-            // Connect: Audio -> Analyser -> Speakers
-            sourceNode.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            // Fast Fourier Transform size (determines resolution of frequencies)
-            analyser.fftSize = 256; 
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-
-            isAudioSetup = true;
+            // Set the height of the bar
+            baseHtml += `<div class="wave-bar" style="height: ${heightPercent}%"></div>`;
         }
 
-        // 3. Draw Loop
-        function draw() {
-            requestAnimationFrame(draw);
+        // Inject the generated bars into both base and played layers
+        waveformBase.innerHTML = baseHtml;
+        waveformPlayedInner.innerHTML = baseHtml;
 
-            // Get current UI size
-            const rect = wrapper.getBoundingClientRect();
-            const width = rect.width;
-            const height = rect.height;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
 
-            if (!isAudioSetup || !analyser) {
-                // Draw a flat line if audio isn't playing yet
-                drawFlatLine(width, height);
-                return;
-            }
-
-            // Get real-time frequency data (0 to 255)
-            analyser.getByteFrequencyData(dataArray);
-
-            // We want fewer bars than frequency bins for a clean look
-            const barCount = 100; 
-            const barWidth = 2;
-            const gap = 3;
-            const step = Math.floor(dataArray.length / barCount) || 1;
-            
-            // Calculate where the progress playhead is
-            const progress = audio.currentTime / (audio.duration || 1);
-            const playheadX = width * progress;
-
-            // Draw Bars
-            for (let i = 0; i < barCount; i++) {
-                // Get average frequency for this bar group
-                let value = 0;
-                for (let j = 0; j < step; j++) {
-                    value += dataArray[(i * step) + j];
-                }
-                value = value / step;
-
-                // Normalize value (0 to 1) and add min height so bars don't disappear
-                let barHeight = (value / 255) * height;
-                if (barHeight < 4) barHeight = 4; 
-                
-                const x = i * (barWidth + gap);
-                
-                // Determine if this bar is before or after the playhead
-                if (x < playheadX) {
-                    ctx.fillStyle = fgColor; // Played
-                } else {
-                    ctx.fillStyle = bgColor; // Unplayed
-                }
-
-                // Draw centered vertically
-                const y = (height / 2) - (barHeight / 2);
-                ctx.fillRect(x, y, barWidth, barHeight);
-            }
-
-            // Draw the teal playhead line
-            ctx.fillStyle = fgColor;
-            ctx.fillRect(playheadX, 0, 1, height);
-        }
-
-        function drawFlatLine(width, height) {
-            const barCount = 100;
-            const barWidth = 2;
-            const gap = 3;
-            ctx.fillStyle = bgColor;
-            for (let i = 0; i < barCount; i++) {
-                const x = i * (barWidth + gap);
-                ctx.fillRect(x, (height/2) - 2, barWidth, 4);
-            }
-        }
-
-        // 4. Format Time
+        // --- 2. Audio Logic ---
         function formatTime(seconds) {
-            if (isNaN(seconds)) return "00:00";
+            if (isNaN(seconds)) return "0:00";
             const min = Math.floor(seconds / 60);
             const sec = Math.floor(seconds % 60);
-            return `${min < 10 ? '0' : ''}${min}:${sec < 10 ? '0' : ''}${sec}`;
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // 5. Audio Event Listeners
         audio.addEventListener('timeupdate', () => {
+            // Update Times
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
-            const remaining = audio.duration - audio.currentTime;
-            remainingTimeDisplay.textContent = `-${formatTime(remaining)}`;
+            remainingTimeDisplay.textContent = formatTime(audio.duration);
+
+            // Update Waveform Progress
+            if (audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                waveformPlayed.style.width = `${percent}%`;
+            }
         });
-        
+
         audio.addEventListener('loadedmetadata', () => {
-            remainingTimeDisplay.textContent = `-${formatTime(audio.duration)}`;
+            remainingTimeDisplay.textContent = formatTime(audio.duration);
         });
 
         audio.addEventListener('ended', () => {
             playIcon.classList.remove('hidden');
             pauseIcon.classList.add('hidden');
+            waveformPlayed.style.width = '0%';
         });
 
-        // 6. Play/Pause Logic
+        // Play / Pause
         playPauseBtn.addEventListener('click', () => {
-            // Initialize audio context on first click (Browser security requirement)
-            initAudio();
-            if(audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-
             if (audio.paused) {
                 audio.play();
                 playIcon.classList.add('hidden');
@@ -247,22 +217,17 @@
             }
         });
 
-        // 7. Seek on Click
-        wrapper.addEventListener('click', (e) => {
-            const rect = wrapper.getBoundingClientRect();
+        // Click to Seek
+        waveformContainer.addEventListener('click', (e) => {
+            const rect = waveformContainer.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
             
-            // Calculate percentage and set audio time
             if (audio.duration) {
                 const seekPercent = clickX / width;
                 audio.currentTime = seekPercent * audio.duration;
             }
         });
-
-        // Start drawing loop
-        draw();
-
     </script>
 </body>
 </html>
