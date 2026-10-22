@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>True BeatStars Player</title>
+    <title>True BeatStars Player - Fixed</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -69,11 +69,13 @@
                 <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
-                <!-- Play/Pause -->
-                <button id="playPauseBtn" class="text-white hover:scale-110 transition-transform bg-white text-black p-2.5 rounded-full flex items-center justify-center">
-                    <svg id="playIcon" class="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="pauseIcon" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                
+                <!-- FIXED PLAY/PAUSE BUTTON -->
+                <button id="playPauseBtn" class="text-white hover:scale-110 transition-transform flex items-center justify-center cursor-pointer">
+                    <svg id="playIcon" class="w-9 h-9 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pauseIcon" class="w-9 h-9 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 </button>
+                
                 <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
                 </button>
@@ -127,12 +129,11 @@
 
         let audioBuffer = null;
         let peaks = [];
-        let isPlaying = false;
 
         // Colors
         const colorUnplayed = '#4b5563'; // Tailwind gray-600
         const colorPlayed = '#ffffff';   // White
-        const colorLine = '#3b82f6';     // Blue playhead line
+        const colorLine = '#ffffff';     // White playhead line (matching image)
 
         // 1. Fetch and Decode the ACTUAL Audio File
         async function loadAudioData() {
@@ -140,21 +141,15 @@
                 const response = await fetch(audio.src);
                 const arrayBuffer = await response.arrayBuffer();
                 
-                // Use Web Audio API to decode the actual audio data
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 
-                // Extract real peaks from the raw data
                 extractPeaks(audioBuffer);
-                
-                // Draw the initial waveform
                 drawWaveform();
                 
-                // Set duration text
                 durationTimeDisplay.textContent = formatTime(audio.duration);
             } catch (error) {
                 console.error("Error loading audio data. Check CORS settings.", error);
-                // Fallback: If fetch fails, draw a flat line
                 ctx.fillStyle = colorUnplayed;
                 ctx.fillRect(0, wrapper.clientHeight/2 - 1, wrapper.clientWidth, 2);
             }
@@ -162,19 +157,17 @@
 
         // 2. Extract the real amplitude data (Peaks)
         function extractPeaks(buffer) {
-            const channelData = buffer.getChannelData(0); // Get left channel
-            const step = Math.ceil(channelData.length / 1000); // Target ~1000 bars
+            const channelData = buffer.getChannelData(0); 
+            const step = Math.ceil(channelData.length / 1000); 
             
             for (let i = 0; i < channelData.length; i += step) {
                 let min = 1.0;
                 let max = -1.0;
-                // Find the highest and lowest point in this chunk
                 for (let j = 0; j < step && (i + j) < channelData.length; j++) {
                     const datum = channelData[i + j];
                     if (datum < min) min = datum;
                     if (datum > max) max = datum;
                 }
-                // The peak is the distance between min and max
                 peaks.push(Math.max(Math.abs(min), Math.abs(max)));
             }
         }
@@ -187,7 +180,6 @@
             const width = wrapper.clientWidth;
             const height = wrapper.clientHeight;
             
-            // Set canvas resolution for crisp rendering
             canvas.width = width * dpr;
             canvas.height = height * dpr;
             ctx.scale(dpr, dpr);
@@ -197,11 +189,9 @@
             const gap = 1;
             const barSpacing = barWidth + gap;
             
-            // Calculate how many bars can fit on screen
             const visibleBars = Math.floor(width / barSpacing);
-            const barStep = totalBars / visibleBars; // Step through peaks based on screen width
+            const barStep = totalBars / visibleBars; 
 
-            // Clear canvas
             ctx.clearRect(0, 0, width, height);
 
             const currentTime = audio.currentTime || 0;
@@ -209,17 +199,14 @@
             const progressRatio = currentTime / duration;
 
             for (let i = 0; i < visibleBars; i++) {
-                // Get the peak value for this visual bar
                 const peakIndex = Math.floor(i * barStep);
                 let peak = peaks[peakIndex] || 0;
                 
-                // Scale height (multiply by 1.5 to make it look fuller, clamp to height)
                 let barHeight = Math.max(2, peak * height * 1.5);
                 
                 const x = i * barSpacing;
                 const y = (height - barHeight) / 2;
 
-                // Determine if this bar has been played
                 const barProgress = x / width;
                 
                 if (barProgress <= progressRatio) {
@@ -228,7 +215,6 @@
                     ctx.fillStyle = colorUnplayed;
                 }
 
-                // Draw rounded bars
                 ctx.beginPath();
                 if (ctx.roundRect) {
                     ctx.roundRect(x, y, barWidth, barHeight, 1);
@@ -244,7 +230,6 @@
             ctx.fillRect(playheadX, 0, 2, height);
         }
 
-        // 4. Time Formatting
         function formatTime(seconds) {
             if (isNaN(seconds)) return "0:00";
             const min = Math.floor(seconds / 60);
@@ -252,10 +237,10 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // 5. Event Listeners
+        // 4. Event Listeners
         audio.addEventListener('timeupdate', () => {
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
-            drawWaveform(); // Redraw to update the played/unplayed colors
+            drawWaveform(); 
         });
 
         playPauseBtn.addEventListener('click', () => {
@@ -263,34 +248,35 @@
                 audio.play();
                 playIcon.classList.add('hidden');
                 pauseIcon.classList.remove('hidden');
-                isPlaying = true;
             } else {
                 audio.pause();
                 playIcon.classList.remove('hidden');
                 pauseIcon.classList.add('hidden');
-                isPlaying = false;
             }
         });
 
-        // --- FIXED SEEK LOGIC ---
+        // --- FIXED SEEK LOGIC (Works exactly on click) ---
         wrapper.addEventListener('click', (e) => {
-            // Use offsetX to get exact pixel position relative to the container
-            const clickX = e.offsetX;
-            const width = wrapper.clientWidth;
+            // Get the exact bounding box of the wrapper
+            const rect = wrapper.getBoundingClientRect();
+            
+            // Calculate exact click position relative to the wrapper
+            const clickX = e.clientX - rect.left;
+            const width = rect.width;
             
             if (audio.duration) {
-                // Calculate percentage (0 to 1)
-                const seekPercent = Math.max(0, Math.min(1, clickX / width));
+                // Ensure the percentage stays between 0 and 1
+                let seekPercent = clickX / width;
+                seekPercent = Math.max(0, Math.min(1, seekPercent));
                 
-                // Set the new time
+                // Set audio time based on the exact click
                 audio.currentTime = seekPercent * audio.duration;
                 
-                // Instantly draw the waveform to reflect the new position
+                // Instantly redraw the waveform to reflect the new position
                 drawWaveform(); 
             }
         });
 
-        // Redraw on window resize so it always fits the screen
         window.addEventListener('resize', () => {
             clearTimeout(window.resizeTimer);
             window.resizeTimer = setTimeout(drawWaveform, 100);
