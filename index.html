@@ -30,8 +30,8 @@
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- RELIABLE AUDIO SOURCE (Swapped to SoundHelix for instant seeking) -->
-    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+    <!-- RELIABLE CORS-FRIENDLY AUDIO SOURCE -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=epic-hollywood-trailer-110124.mp3"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
@@ -130,26 +130,32 @@
 
         let audioBuffer = null;
         let peaks = [];
-        
-        // THE FIX: This variable prevents the audio from resetting the UI during a seek
         let isSeeking = false; 
 
         const colorUnplayed = '#4b5563'; 
         const colorPlayed = '#ffffff';   
         const colorLine = '#ffffff';     
 
-        async function loadAudioData() {
-            try {
-                const response = await fetch(audio.src);
-                const arrayBuffer = await response.arrayBuffer();
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                extractPeaks(audioBuffer);
-                drawWaveform(0); // Initial draw at 0
-                durationTimeDisplay.textContent = formatTime(audio.duration);
-            } catch (error) {
-                console.error("Error loading audio data.", error);
-            }
+        // 1. Fetch audio via XHR (More reliable for CORS than fetch sometimes)
+        function loadAudioData() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', audio.src, true);
+            xhr.responseType = 'arraybuffer';
+
+            xhr.onload = function() {
+                if (this.status === 200) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioContext.decodeAudioData(this.response, function(buffer) {
+                        audioBuffer = buffer;
+                        extractPeaks(audioBuffer);
+                        drawWaveform(0);
+                        durationTimeDisplay.textContent = formatTime(audio.duration);
+                    }, function(e) {
+                        console.error("Error decoding audio data", e);
+                    });
+                }
+            };
+            xhr.send();
         }
 
         function extractPeaks(buffer) {
@@ -186,7 +192,6 @@
 
             ctx.clearRect(0, 0, width, height);
 
-            // Use the manual progress if provided (during seek), otherwise use audio time
             let progressRatio = overrideProgress !== null ? overrideProgress : (audio.currentTime / (audio.duration || 1));
 
             for (let i = 0; i < visibleBars; i++) {
@@ -217,11 +222,9 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // Audio Timeupdate Listener
+        // 2. THE FIX FOR SEEKING
         audio.addEventListener('timeupdate', () => {
-            // IF WE ARE SEEKING, IGNORE THIS EVENT! It prevents the snap-back.
             if (isSeeking) return; 
-            
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
             drawWaveform(); 
         });
@@ -238,9 +241,8 @@
             }
         });
 
-        // --- THE ULTIMATE SEEK LOGIC ---
-        clickOverlay.addEventListener('click', (e) => {
-            // 1. Lock the UI
+        // 3. BULLETPROOF CLICK LOGIC
+        clickOverlay.addEventListener('mousedown', (e) => {
             isSeeking = true;
             
             const rect = clickOverlay.getBoundingClientRect();
@@ -248,18 +250,24 @@
             const width = rect.width;
             const seekPercent = Math.max(0, Math.min(1, clickX / width));
 
-            // 2. Draw instantly where the user clicked
+            // Draw UI instantly
             drawWaveform(seekPercent);
             currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
 
-            // 3. Set the audio time
-            audio.currentTime = seekPercent * audio.duration;
+            // Set audio (Wrap in try/catch to prevent crash if not loaded)
+            try {
+                audio.currentTime = seekPercent * audio.duration;
+            } catch (err) {
+                console.warn("Audio not ready yet for seeking");
+            }
 
-            // 4. Unlock the UI after a short delay to allow the audio to buffer
-            setTimeout(() => {
-                isSeeking = false;
-            }, 150); 
+            // Release lock
+            setTimeout(() => { isSeeking = false; }, 200); 
         });
+
+        // Handle mouse up/mouse leave so if they drag it doesn't get stuck
+        clickOverlay.addEventListener('mouseup', () => { isSeeking = false; });
+        clickOverlay.addEventListener('mouseleave', () => { isSeeking = false; });
 
         window.addEventListener('resize', () => {
             clearTimeout(window.resizeTimer);
