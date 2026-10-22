@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>True BeatStars Player - Fixed</title>
+    <title>True BeatStars Player - Final Fix</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -15,7 +15,17 @@
             width: 100%;
             height: 100%;
             display: block;
+        }
+
+        /* Invisible overlay to catch clicks perfectly */
+        #clickOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             cursor: pointer;
+            z-index: 10;
         }
     </style>
 </head>
@@ -36,6 +46,8 @@
             <div id="waveformWrapper" class="flex-grow h-[60px] relative">
                 <!-- The Canvas where the real waveform is drawn -->
                 <canvas id="waveformCanvas"></canvas>
+                <!-- Invisible click overlay -->
+                <div id="clickOverlay"></div>
             </div>
 
             <!-- Total Time -->
@@ -70,7 +82,7 @@
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
                 
-                <!-- FIXED PLAY/PAUSE BUTTON -->
+                <!-- Play/Pause Button -->
                 <button id="playPauseBtn" class="text-white hover:scale-110 transition-transform flex items-center justify-center cursor-pointer">
                     <svg id="playIcon" class="w-9 h-9 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     <svg id="pauseIcon" class="w-9 h-9 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -126,16 +138,18 @@
         const canvas = document.getElementById('waveformCanvas');
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('waveformWrapper');
+        
+        // The new invisible overlay for perfect clicking
+        const clickOverlay = document.getElementById('clickOverlay'); 
 
         let audioBuffer = null;
         let peaks = [];
 
         // Colors
-        const colorUnplayed = '#4b5563'; // Tailwind gray-600
-        const colorPlayed = '#ffffff';   // White
-        const colorLine = '#ffffff';     // White playhead line (matching image)
+        const colorUnplayed = '#4b5563'; 
+        const colorPlayed = '#ffffff';   
+        const colorLine = '#ffffff';     
 
-        // 1. Fetch and Decode the ACTUAL Audio File
         async function loadAudioData() {
             try {
                 const response = await fetch(audio.src);
@@ -149,13 +163,12 @@
                 
                 durationTimeDisplay.textContent = formatTime(audio.duration);
             } catch (error) {
-                console.error("Error loading audio data. Check CORS settings.", error);
+                console.error("Error loading audio data.", error);
                 ctx.fillStyle = colorUnplayed;
                 ctx.fillRect(0, wrapper.clientHeight/2 - 1, wrapper.clientWidth, 2);
             }
         }
 
-        // 2. Extract the real amplitude data (Peaks)
         function extractPeaks(buffer) {
             const channelData = buffer.getChannelData(0); 
             const step = Math.ceil(channelData.length / 1000); 
@@ -172,7 +185,6 @@
             }
         }
 
-        // 3. Draw the real waveform on Canvas
         function drawWaveform() {
             if (!peaks.length) return;
 
@@ -224,7 +236,6 @@
                 ctx.fill();
             }
 
-            // Draw Playhead Line
             const playheadX = width * progressRatio;
             ctx.fillStyle = colorLine;
             ctx.fillRect(playheadX, 0, 2, height);
@@ -237,7 +248,6 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // 4. Event Listeners
         audio.addEventListener('timeupdate', () => {
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
             drawWaveform(); 
@@ -255,24 +265,22 @@
             }
         });
 
-        // --- FIXED SEEK LOGIC (Works exactly on click) ---
-        wrapper.addEventListener('click', (e) => {
-            // Get the exact bounding box of the wrapper
-            const rect = wrapper.getBoundingClientRect();
-            
-            // Calculate exact click position relative to the wrapper
+        // --- THE PERFECT SEEK LOGIC ---
+        // We attach the click to the invisible overlay div, 
+        // not the canvas. This guarantees accurate pixel math.
+        clickOverlay.addEventListener('click', (e) => {
+            const rect = clickOverlay.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
             
             if (audio.duration) {
-                // Ensure the percentage stays between 0 and 1
-                let seekPercent = clickX / width;
-                seekPercent = Math.max(0, Math.min(1, seekPercent));
+                // Calculate exact percentage
+                const seekPercent = clickX / width;
                 
-                // Set audio time based on the exact click
+                // Apply to audio
                 audio.currentTime = seekPercent * audio.duration;
                 
-                // Instantly redraw the waveform to reflect the new position
+                // Update UI immediately
                 drawWaveform(); 
             }
         });
