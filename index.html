@@ -31,8 +31,8 @@
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- Real Audio File -->
-    <audio id="audioPlayer" crossorigin="anonymous" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
+    <!-- Real Audio File (Added preload="auto" to help buffering) -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
@@ -138,14 +138,12 @@
         const canvas = document.getElementById('waveformCanvas');
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('waveformWrapper');
-        
-        // The new invisible overlay for perfect clicking
         const clickOverlay = document.getElementById('clickOverlay'); 
 
         let audioBuffer = null;
         let peaks = [];
+        let isSeeking = false; // <-- THE FIX: Prevents audio from fighting the click
 
-        // Colors
         const colorUnplayed = '#4b5563'; 
         const colorPlayed = '#ffffff';   
         const colorLine = '#ffffff';     
@@ -185,7 +183,7 @@
             }
         }
 
-        function drawWaveform() {
+        function drawWaveform(overrideProgress = null) {
             if (!peaks.length) return;
 
             const dpr = window.devicePixelRatio || 1;
@@ -206,9 +204,15 @@
 
             ctx.clearRect(0, 0, width, height);
 
-            const currentTime = audio.currentTime || 0;
-            const duration = audio.duration || 1;
-            const progressRatio = currentTime / duration;
+            // If we are seeking, use the manual progress. Otherwise, use the actual audio time.
+            let progressRatio = 0;
+            if (overrideProgress !== null) {
+                progressRatio = overrideProgress;
+            } else {
+                const currentTime = audio.currentTime || 0;
+                const duration = audio.duration || 1;
+                progressRatio = currentTime / duration;
+            }
 
             for (let i = 0; i < visibleBars; i++) {
                 const peakIndex = Math.floor(i * barStep);
@@ -249,6 +253,9 @@
         }
 
         audio.addEventListener('timeupdate', () => {
+            // If we are currently clicking/seeking, ignore the timeupdate until it catches up
+            if (isSeeking) return; 
+            
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
             drawWaveform(); 
         });
@@ -265,29 +272,37 @@
             }
         });
 
-        // --- THE PERFECT SEEK LOGIC ---
-        // We attach the click to the invisible overlay div, 
-        // not the canvas. This guarantees accurate pixel math.
-        clickOverlay.addEventListener('click', (e) => {
+        // --- BULLETPROOF SEEK LOGIC ---
+        clickOverlay.addEventListener('mousedown', (e) => {
+            // 1. Engage the seek lock so the audio player doesn't reset itself
+            isSeeking = true;
+
             const rect = clickOverlay.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
             
+            let seekPercent = Math.max(0, Math.min(1, clickX / width));
+
+            // 2. Draw the waveform IMMEDIATELY so the user sees it jump instantly
+            drawWaveform(seekPercent);
+
+            // 3. Update the text time instantly
             if (audio.duration) {
-                // Calculate exact percentage
-                const seekPercent = clickX / width;
+                currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
                 
-                // Apply to audio
+                // 4. Set the actual audio time
                 audio.currentTime = seekPercent * audio.duration;
-                
-                // Update UI immediately
-                drawWaveform(); 
             }
+
+            // 5. Release the lock after a tiny delay to let the audio engine catch up
+            setTimeout(() => {
+                isSeeking = false;
+            }, 100);
         });
 
         window.addEventListener('resize', () => {
             clearTimeout(window.resizeTimer);
-            window.resizeTimer = setTimeout(drawWaveform, 100);
+            window.resizeTimer = setTimeout(() => drawWaveform(), 100);
         });
 
         // Initialize
