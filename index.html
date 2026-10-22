@@ -3,134 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeatStars Style Player</title>
+    <title>True BeatStars Player</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; background-color: #121212; }
-        
-        /* Custom audio bars */
-        .wave-bar {
-            width: 2px;
-            margin-right: 2px;
-            background-color: #4b5563; /* Tailwind gray-600 */
-            border-radius: 1px;
-            display: inline-block;
-            vertical-align: middle;
-        }
-        
-        /* The played (white/teal) state */
-        .played .wave-bar {
-            background-color: #ffffff; 
-        }
-
-        /* Hide scrollbar for clean UI */
         ::-webkit-scrollbar { display: none; }
+        
+        /* Canvas for the waveform */
+        #waveformCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- Real Audio File (Loading a static MP3 so you can test) -->
-    <audio id="audioPlayer" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
+    <!-- Real Audio File -->
+    <audio id="audioPlayer" crossorigin="anonymous" src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
         
-        <!-- TOP ROW: Waveform & Times -->
-        <div class="flex items-center w-full px-6 pt-4 pb-2 gap-4">
+        <!-- TOP ROW: True Waveform & Times -->
+        <div class="flex items-center w-full px-6 pt-5 pb-3 gap-4">
             <!-- Current Time -->
-            <span id="currentTime" class="text-[13px] font-medium text-gray-300 tabular-nums w-10 text-right">0:00</span>
+            <span id="currentTime" class="text-[13px] font-medium text-gray-400 tabular-nums w-10 text-right">0:00</span>
             
             <!-- Waveform Container -->
-            <div id="waveformContainer" class="flex-grow h-[50px] relative cursor-pointer flex items-center overflow-hidden">
-                <!-- Base Layer (Unplayed) -->
-                <div id="waveformBase" class="absolute top-0 left-0 h-full w-full flex items-center whitespace-nowrap"></div>
-                
-                <!-- Played Layer (White Overlay) -->
-                <div id="waveformPlayed" class="absolute top-0 left-0 h-full overflow-hidden flex items-center pointer-events-none played w-0 border-r-2 border-white">
-                    <!-- This gets injected via JS (it's a copy of the base) -->
-                    <div id="waveformPlayedInner" class="h-full w-full flex items-center whitespace-nowrap"></div>
-                </div>
+            <div id="waveformWrapper" class="flex-grow h-[60px] relative">
+                <!-- The Canvas where the real waveform is drawn -->
+                <canvas id="waveformCanvas"></canvas>
             </div>
 
             <!-- Total Time -->
-            <span id="remainingTime" class="text-[13px] font-medium text-gray-300 tabular-nums w-10 text-left">0:00</span>
+            <span id="durationTime" class="text-[13px] font-medium text-gray-400 tabular-nums w-10 text-left">0:00</span>
         </div>
 
         <!-- BOTTOM ROW: Track Info & Controls -->
-        <div class="flex items-center justify-between px-6 pb-4 pt-2">
+        <div class="flex items-center justify-between px-6 pb-5 pt-2">
             
             <!-- Left: Cover Art & Title -->
-            <div class="flex items-center gap-4 w-[400px]">
-                <!-- Cover Image -->
-                <div class="w-[56px] h-[56px] bg-[#222] bg-cover bg-center rounded-sm shrink-0" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
+            <div class="flex items-center gap-4 w-[380px]">
+                <div class="w-[60px] h-[60px] bg-[#222] bg-cover bg-center rounded-md shrink-0 shadow-lg" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
                 
-                <!-- Title Info -->
                 <div class="flex flex-col truncate">
                     <div class="text-[15px] font-semibold text-white tracking-wide truncate">Imperator (trap hip hop drake / Bpm 144 F#min)</div>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="text-[13px] text-gray-400">Black Rose Beatz</span>
                         <!-- Verified Badge -->
                         <svg class="w-3.5 h-3.5 fill-[#1d9bf0]" viewBox="0 0 24 24"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.755 2.73 1.882 3.44-.04.18-.062.37-.062.56 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25.52 1.333 1.828 2.25 3.337 2.25s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.19-.022-.38-.062-.56 1.127-.71 1.882-1.98 1.882-3.44zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/></svg>
-                        <span class="text-[12px] text-gray-500">&bull;</span>
+                        <span class="text-[12px] text-gray-600">&bull;</span>
                         <span class="text-[12px] text-gray-400">144 BPM</span>
                     </div>
                 </div>
             </div>
 
             <!-- Center: Controls -->
-            <div class="flex items-center gap-6">
-                <!-- Heart -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+            <div class="flex items-center gap-7">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-6 h-6 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 </button>
-                <!-- Prev -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
                 <!-- Play/Pause -->
-                <button id="playPauseBtn" class="text-white hover:scale-105 transition-transform">
-                    <svg id="playIcon" class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="pauseIcon" class="w-8 h-8 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                <button id="playPauseBtn" class="text-white hover:scale-110 transition-transform bg-white text-black p-2.5 rounded-full flex items-center justify-center">
+                    <svg id="playIcon" class="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pauseIcon" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 </button>
-                <!-- Next -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
                 </button>
-                <!-- Menu -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
                 </button>
             </div>
 
             <!-- Right: Actions -->
-            <div class="flex items-center gap-6 w-[400px] justify-end">
-                <!-- Edit -->
-                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+            <div class="flex items-center gap-5 w-[380px] justify-end">
+                <button class="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors">
                     <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     <span class="text-[13px] font-medium">Edit</span>
                 </button>
-                <!-- Loop -->
-                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+                <button class="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors">
                     <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                     <span class="text-[13px] font-medium">Loop</span>
                 </button>
-                <!-- Lyrics -->
-                <button class="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors">
+                <button class="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors">
                     <svg class="w-4 h-4 stroke-current fill-transparent" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     <span class="text-[13px] font-medium">Lyrics</span>
                 </button>
-                <!-- Volume -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
-                <!-- More (dots) -->
-                <button class="text-gray-300 hover:text-white transition-colors">
+                <button class="text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                 </button>
 
                 <!-- Buy Button -->
-                <button class="flex items-center gap-2 bg-[#007bff] hover:bg-blue-600 transition-colors px-4 py-2 rounded-md ml-2">
+                <button class="flex items-center gap-2 bg-[#007bff] hover:bg-blue-600 transition-colors px-5 py-2.5 rounded-md ml-2 shadow-lg shadow-blue-500/20">
                     <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"/></svg>
                     <span class="text-[14px] font-semibold text-white">$51.00</span>
                 </button>
@@ -145,36 +119,132 @@
         const playIcon = document.getElementById('playIcon');
         const pauseIcon = document.getElementById('pauseIcon');
         const currentTimeDisplay = document.getElementById('currentTime');
-        const remainingTimeDisplay = document.getElementById('remainingTime');
+        const durationTimeDisplay = document.getElementById('durationTime');
         
-        const waveformContainer = document.getElementById('waveformContainer');
-        const waveformBase = document.getElementById('waveformBase');
-        const waveformPlayed = document.getElementById('waveformPlayed');
-        const waveformPlayedInner = document.getElementById('waveformPlayedInner');
+        const canvas = document.getElementById('waveformCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('waveformWrapper');
 
-        // --- 1. Generate Static BeatStars Style Waveform ---
-        const barCount = 200;
-        let baseHtml = '';
+        let audioBuffer = null;
+        let peaks = [];
+        let isPlaying = false;
 
-        for (let i = 0; i < barCount; i++) {
-            // Create a natural looking audio wave using sine waves and random noise
-            // This creates a pattern of loud and soft sections
-            let envelope = Math.sin((i / barCount) * Math.PI * 4) * 0.4 + 0.6; 
-            let noise = Math.random() * 0.5 + 0.5;
-            
-            // Calculate height (10% to 100%)
-            let heightPercent = Math.min(100, Math.max(10, (envelope * noise) * 100));
-            
-            // Set the height of the bar
-            baseHtml += `<div class="wave-bar" style="height: ${heightPercent}%"></div>`;
+        // Colors
+        const colorUnplayed = '#4b5563'; // Tailwind gray-600
+        const colorPlayed = '#ffffff';   // White
+        const colorLine = '#3b82f6';     // Blue playhead line
+
+        // 1. Fetch and Decode the ACTUAL Audio File
+        async function loadAudioData() {
+            try {
+                const response = await fetch(audio.src);
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Use Web Audio API to decode the actual audio data
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // Extract real peaks from the raw data
+                extractPeaks(audioBuffer);
+                
+                // Draw the initial waveform
+                drawWaveform();
+                
+                // Set duration text
+                durationTimeDisplay.textContent = formatTime(audio.duration);
+            } catch (error) {
+                console.error("Error loading audio data. Check CORS settings.", error);
+                // Fallback: If fetch fails (e.g. running local file without server), draw a flat line
+                ctx.fillStyle = colorUnplayed;
+                ctx.fillRect(0, wrapper.clientHeight/2 - 1, wrapper.clientWidth, 2);
+            }
         }
 
-        // Inject the generated bars into both base and played layers
-        waveformBase.innerHTML = baseHtml;
-        waveformPlayedInner.innerHTML = baseHtml;
+        // 2. Extract the real amplitude data (Peaks)
+        function extractPeaks(buffer) {
+            const channelData = buffer.getChannelData(0); // Get left channel
+            const step = Math.ceil(channelData.length / 1000); // Target ~1000 bars
+            
+            for (let i = 0; i < channelData.length; i += step) {
+                let min = 1.0;
+                let max = -1.0;
+                // Find the highest and lowest point in this chunk
+                for (let j = 0; j < step && (i + j) < channelData.length; j++) {
+                    const datum = channelData[i + j];
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                // The peak is the distance between min and max
+                peaks.push(Math.max(Math.abs(min), Math.abs(max)));
+            }
+        }
 
+        // 3. Draw the real waveform on Canvas
+        function drawWaveform() {
+            if (!peaks.length) return;
 
-        // --- 2. Audio Logic ---
+            const dpr = window.devicePixelRatio || 1;
+            const width = wrapper.clientWidth;
+            const height = wrapper.clientHeight;
+            
+            // Set canvas resolution for crisp rendering
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const totalBars = peaks.length;
+            const barWidth = 2;
+            const gap = 1;
+            const barSpacing = barWidth + gap;
+            
+            // Calculate how many bars can fit on screen
+            const visibleBars = Math.floor(width / barSpacing);
+            const barStep = totalBars / visibleBars; // Step through peaks based on screen width
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            const currentTime = audio.currentTime || 0;
+            const duration = audio.duration || 1;
+            const progressRatio = currentTime / duration;
+
+            for (let i = 0; i < visibleBars; i++) {
+                // Get the peak value for this visual bar
+                const peakIndex = Math.floor(i * barStep);
+                let peak = peaks[peakIndex] || 0;
+                
+                // Scale height (multiply by 1.5 to make it look fuller, clamp to height)
+                let barHeight = Math.max(2, peak * height * 1.5);
+                
+                const x = i * barSpacing;
+                const y = (height - barHeight) / 2;
+
+                // Determine if this bar has been played
+                const barProgress = x / width;
+                
+                if (barProgress <= progressRatio) {
+                    ctx.fillStyle = colorPlayed;
+                } else {
+                    ctx.fillStyle = colorUnplayed;
+                }
+
+                // Draw rounded bars
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(x, y, barWidth, barHeight, 1);
+                } else {
+                    ctx.rect(x, y, barWidth, barHeight);
+                }
+                ctx.fill();
+            }
+
+            // Draw Playhead Line
+            const playheadX = width * progressRatio;
+            ctx.fillStyle = colorLine;
+            ctx.fillRect(playheadX, 0, 2, height);
+        }
+
+        // 4. Time Formatting
         function formatTime(seconds) {
             if (isNaN(seconds)) return "0:00";
             const min = Math.floor(seconds / 60);
@@ -182,52 +252,49 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
+        // 5. Event Listeners
         audio.addEventListener('timeupdate', () => {
-            // Update Times
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
-            remainingTimeDisplay.textContent = formatTime(audio.duration);
-
-            // Update Waveform Progress
-            if (audio.duration) {
-                const percent = (audio.currentTime / audio.duration) * 100;
-                waveformPlayed.style.width = `${percent}%`;
-            }
+            drawWaveform(); // Redraw to update the played/unplayed colors
         });
 
-        audio.addEventListener('loadedmetadata', () => {
-            remainingTimeDisplay.textContent = formatTime(audio.duration);
-        });
-
-        audio.addEventListener('ended', () => {
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
-            waveformPlayed.style.width = '0%';
-        });
-
-        // Play / Pause
         playPauseBtn.addEventListener('click', () => {
             if (audio.paused) {
                 audio.play();
                 playIcon.classList.add('hidden');
                 pauseIcon.classList.remove('hidden');
+                isPlaying = true;
             } else {
                 audio.pause();
                 playIcon.classList.remove('hidden');
                 pauseIcon.classList.add('hidden');
+                isPlaying = false;
             }
         });
 
-        // Click to Seek
-        waveformContainer.addEventListener('click', (e) => {
-            const rect = waveformContainer.getBoundingClientRect();
+        // Seek on Click
+        wrapper.addEventListener('click', (e) => {
+            const rect = wrapper.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
             
             if (audio.duration) {
                 const seekPercent = clickX / width;
                 audio.currentTime = seekPercent * audio.duration;
+                drawWaveform(); // Instantly update visual
             }
         });
+
+        // Redraw on window resize so it always fits the screen
+        window.addEventListener('resize', () => {
+            // Debounce resize for performance
+            clearTimeout(window.resizeTimer);
+            window.resizeTimer = setTimeout(drawWaveform, 100);
+        });
+
+        // Initialize
+        loadAudioData();
+
     </script>
 </body>
 </html>
