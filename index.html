@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeatStars Player - Fully Working</title>
+    <title>BeatStars Player - Real Waveform Test</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,7 +16,6 @@
             display: block;
         }
 
-        /* Invisible overlay for perfect clicking */
         #clickOverlay {
             position: absolute;
             top: 0;
@@ -30,8 +29,8 @@
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- We leave the src empty for now to use the generated tone -->
-    <audio id="audioPlayer" crossorigin="anonymous" preload="auto"></audio>
+    <!-- RELIABLE, CORS-FRIENDLY AUDIO SOURCE -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cheerful%20Annoyance.mp3"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
@@ -40,8 +39,11 @@
         <div class="flex items-center w-full px-6 pt-5 pb-3 gap-4">
             <span id="currentTime" class="text-[13px] font-medium text-gray-400 tabular-nums w-10 text-right">0:00</span>
             
-            <div id="waveformWrapper" class="flex-grow h-[60px] relative">
-                <canvas id="waveformCanvas"></canvas>
+            <div id="waveformWrapper" class="flex-grow h-[60px] relative flex items-center justify-center">
+                <!-- Loading Text -->
+                <div id="loadingText" class="absolute text-xs text-gray-500 animate-pulse z-0">Loading real audio data...</div>
+                
+                <canvas id="waveformCanvas" class="relative z-10"></canvas>
                 <div id="clickOverlay"></div>
             </div>
 
@@ -56,12 +58,12 @@
                 <div class="w-[60px] h-[60px] bg-[#222] bg-cover bg-center rounded-md shrink-0 shadow-lg" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=150&auto=format&fit=crop');"></div>
                 
                 <div class="flex flex-col truncate">
-                    <div class="text-[15px] font-semibold text-white tracking-wide truncate">Imperator (trap hip hop drake / Bpm 144 F#min)</div>
+                    <div class="text-[15px] font-semibold text-white tracking-wide truncate">Cheerful Annoyance (Test Track)</div>
                     <div class="flex items-center gap-2 mt-1">
-                        <span class="text-[13px] text-gray-400">Black Rose Beatz</span>
+                        <span class="text-[13px] text-gray-400">Kevin MacLeod</span>
                         <svg class="w-3.5 h-3.5 fill-[#1d9bf0]" viewBox="0 0 24 24"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.755 2.73 1.882 3.44-.04.18-.062.37-.062.56 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25.52 1.333 1.828 2.25 3.337 2.25s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.19-.022-.38-.062-.56 1.127-.71 1.882-1.98 1.882-3.44zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/></svg>
                         <span class="text-[12px] text-gray-600">&bull;</span>
-                        <span class="text-[12px] text-gray-400">144 BPM</span>
+                        <span class="text-[12px] text-gray-400">120 BPM</span>
                     </div>
                 </div>
             </div>
@@ -127,96 +129,70 @@
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('waveformWrapper');
         const clickOverlay = document.getElementById('clickOverlay'); 
+        const loadingText = document.getElementById('loadingText');
 
         let audioBuffer = null;
         let peaks = [];
         let isSeeking = false; 
-        const FIXED_DURATION = 180; // 3 minutes
 
         const colorUnplayed = '#4b5563'; 
         const colorPlayed = '#ffffff';   
         const colorLine = '#ffffff';     
 
-        // --- 1. GENERATE A LOCAL AUDIO FILE (No CORS, No Errors) ---
-        function generateTestAudio() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const sampleRate = audioContext.sampleRate;
-            const duration = FIXED_DURATION;
-            const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
-            const data = buffer.getChannelData(0);
+        // 1. Fetch the REAL audio data
+        function loadAudioData() {
+            // Create an XHR request to fetch the raw MP3 data
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', audio.src, true);
+            xhr.responseType = 'arraybuffer';
 
-            // Create a rhythmic tone that sounds like a beat
-            for (let i = 0; i < buffer.length; i++) {
-                const time = i / sampleRate;
-                // A simple sine wave beat every 0.5 seconds
-                const beat = Math.sin(time * Math.PI * 2 * 50) * 0.5;
-                const bass = Math.sin(time * Math.PI * 2 * 100) * 0.5;
-                
-                // Add a "kick" envelope
-                let kick = 0;
-                if (time % 0.5 < 0.1) {
-                    kick = Math.sin(time * Math.PI * 2 * 60) * (1 - (time % 0.5) * 10);
+            xhr.onload = function() {
+                if (this.status === 200) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Decode the actual audio into mathematical data
+                    audioContext.decodeAudioData(this.response, function(buffer) {
+                        audioBuffer = buffer;
+                        
+                        // Extract the real visual peaks from the data
+                        extractPeaks(audioBuffer);
+                        
+                        // Hide loading text and draw
+                        loadingText.style.display = 'none';
+                        drawWaveform(0);
+                        durationTimeDisplay.textContent = formatTime(audio.duration);
+                    }, function(e) {
+                        loadingText.textContent = "Error decoding audio.";
+                        console.error("Error decoding audio data", e);
+                    });
                 }
-                
-                data[i] = (beat + bass + kick) * 0.2;
-            }
+            };
+            
+            xhr.onerror = function() {
+                loadingText.textContent = "Network Error (CORS).";
+            };
+            
+            xhr.send();
+        }
 
-            // Extract peaks from this generated audio
-            const step = Math.ceil(data.length / 1000);
-            for (let i = 0; i < data.length; i += step) {
+        function extractPeaks(buffer) {
+            const channelData = buffer.getChannelData(0); 
+            // Divide into 1000 chunks to get the overall shape
+            const step = Math.ceil(channelData.length / 1000); 
+            
+            for (let i = 0; i < channelData.length; i += step) {
                 let min = 1.0; let max = -1.0;
-                for (let j = 0; j < step && (i + j) < data.length; j++) {
-                    const datum = data[i + j];
+                for (let j = 0; j < step && (i + j) < channelData.length; j++) {
+                    const datum = channelData[i + j];
                     if (datum < min) min = datum;
                     if (datum > max) max = datum;
                 }
+                // The peak is the distance between min and max
                 peaks.push(Math.max(Math.abs(min), Math.abs(max)));
             }
-
-            // Set the audio source to this generated buffer
-            const blob = bufferToWav(buffer);
-            const url = URL.createObjectURL(blob);
-            audio.src = url;
-            audio.load();
-
-            durationTimeDisplay.textContent = formatTime(duration);
-            drawWaveform(0);
         }
 
-        // Helper to convert AudioBuffer to WAV Blob
-        function bufferToWav(buffer) {
-            let numOfChan = buffer.numberOfChannels,
-                length = buffer.length * numOfChan * 2 + 44,
-                bufferArr = new ArrayBuffer(length),
-                view = new DataView(bufferArr),
-                channels = [], i, sample,
-                offset = 0,
-                pos = 0;
-
-            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
-
-            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
-            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
-            setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2); setUint16(16);
-            setUint32(0x61746164); setUint32(length - pos - 4);
-
-            for (i = 0; i < buffer.numberOfChannels; i++)
-                channels.push(buffer.getChannelData(i));
-
-            while (pos < length) {
-                for (i = 0; i < numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                    view.setInt16(pos, sample, true); pos += 2;
-                }
-                offset++;
-            }
-            return new Blob([bufferArr], { type: "audio/wav" });
-        }
-
-        // --- 2. DRAWING ---
+        // 2. Draw the exact data
         function drawWaveform(overrideProgress = null) {
             if (!peaks.length) return;
 
@@ -242,7 +218,12 @@
             for (let i = 0; i < visibleBars; i++) {
                 const peakIndex = Math.floor(i * barStep);
                 let peak = peaks[peakIndex] || 0;
-                let barHeight = Math.max(2, peak * height * 1.5);
+                
+                // Multiply peak by height to stretch it out
+                let barHeight = Math.max(2, peak * height * 2.5);
+                // Clamp to max height
+                if (barHeight > height) barHeight = height;
+                
                 const x = i * barSpacing;
                 const y = (height - barHeight) / 2;
                 const barProgress = x / width;
@@ -267,9 +248,9 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // --- 3. EVENTS ---
+        // 3. The Fix for Snapping Back
         audio.addEventListener('timeupdate', () => {
-            if (isSeeking) return; 
+            if (isSeeking) return; // Ignore audio resets while clicking
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
             drawWaveform(); 
         });
@@ -286,7 +267,6 @@
             }
         });
 
-        // THE ULTIMATE SEEK LOGIC
         clickOverlay.addEventListener('mousedown', (e) => {
             isSeeking = true;
             
@@ -295,7 +275,7 @@
             const width = rect.width;
             const seekPercent = Math.max(0, Math.min(1, clickX / width));
 
-            // Draw UI instantly
+            // Draw instantly
             drawWaveform(seekPercent);
             currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
 
@@ -315,8 +295,8 @@
             window.resizeTimer = setTimeout(() => drawWaveform(), 100);
         });
 
-        // Start
-        generateTestAudio();
+        // Start Loading
+        loadAudioData();
     </script>
 </body>
 </html>
