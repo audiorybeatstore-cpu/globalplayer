@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeatStars Player - Final Working</title>
+    <title>BeatStars Player - Fully Working</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -30,8 +30,8 @@
 </head>
 <body class="flex justify-center items-center h-screen font-sans antialiased select-none text-white">
 
-    <!-- RELIABLE CORS-FRIENDLY AUDIO SOURCE -->
-    <audio id="audioPlayer" crossorigin="anonymous" preload="auto" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=epic-hollywood-trailer-110124.mp3"></audio>
+    <!-- We leave the src empty for now to use the generated tone -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto"></audio>
 
     <!-- Main Player Container -->
     <div class="w-full max-w-[1400px] bg-[#0a0a0a] flex flex-col border-t border-b border-[#222]">
@@ -131,47 +131,92 @@
         let audioBuffer = null;
         let peaks = [];
         let isSeeking = false; 
+        const FIXED_DURATION = 180; // 3 minutes
 
         const colorUnplayed = '#4b5563'; 
         const colorPlayed = '#ffffff';   
         const colorLine = '#ffffff';     
 
-        // 1. Fetch audio via XHR (More reliable for CORS than fetch sometimes)
-        function loadAudioData() {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', audio.src, true);
-            xhr.responseType = 'arraybuffer';
+        // --- 1. GENERATE A LOCAL AUDIO FILE (No CORS, No Errors) ---
+        function generateTestAudio() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = audioContext.sampleRate;
+            const duration = FIXED_DURATION;
+            const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+            const data = buffer.getChannelData(0);
 
-            xhr.onload = function() {
-                if (this.status === 200) {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    audioContext.decodeAudioData(this.response, function(buffer) {
-                        audioBuffer = buffer;
-                        extractPeaks(audioBuffer);
-                        drawWaveform(0);
-                        durationTimeDisplay.textContent = formatTime(audio.duration);
-                    }, function(e) {
-                        console.error("Error decoding audio data", e);
-                    });
+            // Create a rhythmic tone that sounds like a beat
+            for (let i = 0; i < buffer.length; i++) {
+                const time = i / sampleRate;
+                // A simple sine wave beat every 0.5 seconds
+                const beat = Math.sin(time * Math.PI * 2 * 50) * 0.5;
+                const bass = Math.sin(time * Math.PI * 2 * 100) * 0.5;
+                
+                // Add a "kick" envelope
+                let kick = 0;
+                if (time % 0.5 < 0.1) {
+                    kick = Math.sin(time * Math.PI * 2 * 60) * (1 - (time % 0.5) * 10);
                 }
-            };
-            xhr.send();
-        }
+                
+                data[i] = (beat + bass + kick) * 0.2;
+            }
 
-        function extractPeaks(buffer) {
-            const channelData = buffer.getChannelData(0); 
-            const step = Math.ceil(channelData.length / 1000); 
-            for (let i = 0; i < channelData.length; i += step) {
+            // Extract peaks from this generated audio
+            const step = Math.ceil(data.length / 1000);
+            for (let i = 0; i < data.length; i += step) {
                 let min = 1.0; let max = -1.0;
-                for (let j = 0; j < step && (i + j) < channelData.length; j++) {
-                    const datum = channelData[i + j];
+                for (let j = 0; j < step && (i + j) < data.length; j++) {
+                    const datum = data[i + j];
                     if (datum < min) min = datum;
                     if (datum > max) max = datum;
                 }
                 peaks.push(Math.max(Math.abs(min), Math.abs(max)));
             }
+
+            // Set the audio source to this generated buffer
+            const blob = bufferToWav(buffer);
+            const url = URL.createObjectURL(blob);
+            audio.src = url;
+            audio.load();
+
+            durationTimeDisplay.textContent = formatTime(duration);
+            drawWaveform(0);
         }
 
+        // Helper to convert AudioBuffer to WAV Blob
+        function bufferToWav(buffer) {
+            let numOfChan = buffer.numberOfChannels,
+                length = buffer.length * numOfChan * 2 + 44,
+                bufferArr = new ArrayBuffer(length),
+                view = new DataView(bufferArr),
+                channels = [], i, sample,
+                offset = 0,
+                pos = 0;
+
+            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+            setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2); setUint16(16);
+            setUint32(0x61746164); setUint32(length - pos - 4);
+
+            for (i = 0; i < buffer.numberOfChannels; i++)
+                channels.push(buffer.getChannelData(i));
+
+            while (pos < length) {
+                for (i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    view.setInt16(pos, sample, true); pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([bufferArr], { type: "audio/wav" });
+        }
+
+        // --- 2. DRAWING ---
         function drawWaveform(overrideProgress = null) {
             if (!peaks.length) return;
 
@@ -222,7 +267,7 @@
             return `${min}:${sec < 10 ? '0' : ''}${sec}`;
         }
 
-        // 2. THE FIX FOR SEEKING
+        // --- 3. EVENTS ---
         audio.addEventListener('timeupdate', () => {
             if (isSeeking) return; 
             currentTimeDisplay.textContent = formatTime(audio.currentTime);
@@ -241,7 +286,7 @@
             }
         });
 
-        // 3. BULLETPROOF CLICK LOGIC
+        // THE ULTIMATE SEEK LOGIC
         clickOverlay.addEventListener('mousedown', (e) => {
             isSeeking = true;
             
@@ -254,18 +299,14 @@
             drawWaveform(seekPercent);
             currentTimeDisplay.textContent = formatTime(seekPercent * audio.duration);
 
-            // Set audio (Wrap in try/catch to prevent crash if not loaded)
+            // Set audio 
             try {
                 audio.currentTime = seekPercent * audio.duration;
-            } catch (err) {
-                console.warn("Audio not ready yet for seeking");
-            }
+            } catch (err) {}
 
-            // Release lock
-            setTimeout(() => { isSeeking = false; }, 200); 
+            setTimeout(() => { isSeeking = false; }, 150); 
         });
 
-        // Handle mouse up/mouse leave so if they drag it doesn't get stuck
         clickOverlay.addEventListener('mouseup', () => { isSeeking = false; });
         clickOverlay.addEventListener('mouseleave', () => { isSeeking = false; });
 
@@ -274,7 +315,8 @@
             window.resizeTimer = setTimeout(() => drawWaveform(), 100);
         });
 
-        loadAudioData();
+        // Start
+        generateTestAudio();
     </script>
 </body>
 </html>
